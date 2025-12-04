@@ -14,7 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className={`${shareTechMono.className} bg-black text-neutral-100 antialiased text-[17px]`}>
+    <div className={`${shareTechMono.className} bg-black text-neutral-100 subpixel-antialiased text-lg`}>
       {children}
     </div>
   )
