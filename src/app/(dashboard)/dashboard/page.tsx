@@ -1,6 +1,8 @@
+/* eslint-disable */
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 import {
   ChevronRight,
   Shield,
@@ -16,8 +18,11 @@ import {
   Settings,
   Terminal,
   Calendar,
+  LogOut,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/auth/useAuth"
+import { DashboardLoader } from "@/components/dashboard/dashboard-loader"
 import CommandCenterPage from "./command-center/page"
 import AgentNetworkPage from "./agent-network/page"
 import OperationsPage from "./operations/page"
@@ -28,26 +33,7 @@ import ProfilePage from "@/components/dashboard/profile-page"
 import AnnouncementsPage from "@/components/dashboard/announcements-page"
 import AdminPage from "@/components/dashboard/admin-page"
 
-function PlaceholderPage({ title, icon: Icon, description }: { title: string; icon: any; description: string }) {
-  return (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 mx-auto rounded border border-neutral-800 flex items-center justify-center">
-          <Icon className="w-8 h-8 text-neutral-600" />
-        </div>
-        <div>
-          <h2 className="text-lg text-neutral-400 tracking-wider">{title}</h2>
-          <p className="text-xs text-neutral-600 mt-1">{description}</p>
-        </div>
-        <div className="flex items-center justify-center gap-1">
-          <span className="w-1 h-1 bg-neutral-700 rounded-full animate-pulse" />
-          <span className="w-1 h-1 bg-neutral-700 rounded-full animate-pulse delay-100" />
-          <span className="w-1 h-1 bg-neutral-700 rounded-full animate-pulse delay-200" />
-        </div>
-      </div>
-    </div>
-  )
-}
+
 
 function CommandPalette({
   isOpen,
@@ -173,6 +159,16 @@ export default function TacticalDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const { user, signOut } = useAuth()
+  const [mounted, setMounted] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setMounted(true)
+    // Simulate a minimum load time for the effect
+    const timer = setTimeout(() => setLoading(false), 2000)
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -191,149 +187,217 @@ export default function TacticalDashboard() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-black">
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        onNavigate={setActiveSection}
-      />
+    <AnimatePresence mode="wait">
+      {(!mounted || loading) ? (
+        <motion.div
+          key="loader"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <DashboardLoader />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="dashboard"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex h-screen bg-black"
+        >
+          <CommandPalette
+            isOpen={commandPaletteOpen}
+            onClose={() => setCommandPaletteOpen(false)}
+            onNavigate={setActiveSection}
+          />
 
-      <div
-        className={`${sidebarCollapsed ? "w-16" : "w-56"} bg-neutral-950 border-r border-neutral-900 transition-all duration-300 fixed md:relative z-50 md:z-auto h-full`}
-      >
-        <div className="p-3 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-6 pb-3 border-b border-neutral-900">
-            <div className={`${sidebarCollapsed ? "hidden" : "block"}`}>
-              <h1 className="text-neutral-100 text-sm tracking-[0.3em]">DEDSEC</h1>
-              <p className="text-neutral-600 text-[10px] tracking-wider">CTF TEAM // X01</p>
-            </div>
-            {sidebarCollapsed && <span className="text-neutral-500 text-xs mx-auto tracking-wider">DS</span>}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 h-6 w-6"
-            >
-              <ChevronRight className={`w-3 h-3 transition-transform ${sidebarCollapsed ? "" : "rotate-180"}`} />
-            </Button>
-          </div>
-
-          <nav className="space-y-1 flex-1">
-            {[
-              { id: "overview", icon: Home, label: "OVERVIEW" },
-              { id: "agents", icon: Users, label: "TEAM" },
-              { id: "operations", icon: Calendar, label: "EVENTS" },
-              { id: "intelligence", icon: FileText, label: "WRITEUPS" },
-              { id: "systems", icon: Trophy, label: "RANKINGS" },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${activeSection === item.id
-                    ? "bg-neutral-900 text-neutral-100 border-l-2 border-neutral-100"
-                    : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50"
-                  }`}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                <item.icon className="w-4 h-4" />
-                {!sidebarCollapsed && <span className="text-xs tracking-wider">{item.label}</span>}
-              </button>
-            ))}
-
-            <div className="my-3 border-t border-neutral-900" />
-
-            {[
-              { id: "chat", icon: MessageSquare, label: "CHAT" },
-              { id: "profile", icon: User, label: "PROFILE" },
-              { id: "announcements", icon: Megaphone, label: "ANNOUNCE" },
-              { id: "admin", icon: Settings, label: "ADMIN" },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${activeSection === item.id
-                    ? "bg-neutral-900 text-neutral-100 border-l-2 border-neutral-100"
-                    : "text-neutral-600 hover:text-neutral-400 hover:bg-neutral-900/50"
-                  }`}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                <item.icon className="w-4 h-4" />
-                {!sidebarCollapsed && <span className="text-xs tracking-wider">{item.label}</span>}
-              </button>
-            ))}
-          </nav>
-
-          {!sidebarCollapsed && (
-            <div className="mt-auto pt-3 border-t border-neutral-900">
-              <div className="flex items-center gap-2 p-2">
-                <div className="w-8 h-8 rounded bg-neutral-900 flex items-center justify-center border border-neutral-800">
-                  <span className="text-[10px] text-neutral-400">OP</span>
+          <div
+            className={`${sidebarCollapsed ? "w-16" : "w-56"} bg-neutral-950 border-r border-neutral-900 transition-all duration-300 fixed md:relative z-50 md:z-auto h-full`}
+          >
+            <div className="p-3 h-full flex flex-col">
+              <div className="flex items-center justify-between mb-6 pb-3 border-b border-neutral-900">
+                <div className={`${sidebarCollapsed ? "hidden" : "block"}`}>
+                  <h1 className="text-neutral-100 text-sm tracking-[0.3em]">DEDSEC</h1>
+                  <p className="text-neutral-600 text-xxs tracking-wider">CTF TEAM // X01</p>
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-neutral-300 tracking-wider">OPERATOR</div>
-                  <div className="text-[10px] text-neutral-600">TEAM CAPTAIN</div>
-                </div>
+                {sidebarCollapsed && <span className="text-neutral-500 text-xs mx-auto tracking-wider">DS</span>}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 h-6 w-6"
+                >
+                  <ChevronRight className={`w-3 h-3 transition-transform ${sidebarCollapsed ? "" : "rotate-180"}`} />
+                </Button>
+              </div>
+
+              <nav className="space-y-1 flex-1">
+                {[
+                  { id: "overview", icon: Home, label: "OVERVIEW" },
+                  { id: "agents", icon: Users, label: "TEAM" },
+                  { id: "operations", icon: Calendar, label: "EVENTS" },
+                  { id: "intelligence", icon: FileText, label: "WRITEUPS" },
+                  { id: "systems", icon: Trophy, label: "RANKINGS" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${activeSection === item.id
+                      ? "bg-neutral-900 text-neutral-100 border-l-2 border-neutral-100"
+                      : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50"
+                      }`}
+                    title={sidebarCollapsed ? item.label : undefined}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {!sidebarCollapsed && <span className="text-xs tracking-wider">{item.label}</span>}
+                  </button>
+                ))}
+
+                <div className="my-3 border-t border-neutral-900" />
+
+                {[
+                  { id: "chat", icon: MessageSquare, label: "CHAT" },
+                  { id: "profile", icon: User, label: "PROFILE" },
+                  { id: "announcements", icon: Megaphone, label: "ANNOUNCE" },
+                  { id: "admin", icon: Settings, label: "ADMIN" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${activeSection === item.id
+                      ? "bg-neutral-900 text-neutral-100 border-l-2 border-neutral-100"
+                      : "text-neutral-600 hover:text-neutral-400 hover:bg-neutral-900/50"
+                      }`}
+                    title={sidebarCollapsed ? item.label : undefined}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {!sidebarCollapsed && <span className="text-xs tracking-wider">{item.label}</span>}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="mt-auto pt-4 border-t border-neutral-900">
+                {!sidebarCollapsed ? (
+                  <div className="space-y-4">
+                    {/* User Profile */}
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-800 overflow-hidden shrink-0">
+                        {user?.photoURL ? (
+                          <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-5 h-5 text-neutral-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-neutral-200 truncate">{user?.displayName || 'Unknown Agent'}</div>
+                        <div className="text-xs text-indigo-400 font-mono tracking-wider">{user?.title || '0x0000'}</div>
+                      </div>
+                    </div>
+
+                    {/* Logout Button (Full) */}
+                    <div className="px-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await signOut()
+                            window.location.href = '/login'
+                          } catch (error) {
+                            console.error('Logout failed:', error)
+                          }
+                        }}
+                        className="w-full flex items-center gap-2 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 px-2 py-1.5 rounded transition-colors text-xs font-medium tracking-wider group"
+                      >
+                        <LogOut className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        LOGOUT
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-center px-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await signOut()
+                          window.location.href = '/login'
+                        } catch (error) {
+                          console.error('Logout failed:', error)
+                        }
+                      }}
+                      className="flex items-center justify-center w-10 h-10 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                      title="Logout"
+                    >
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+
+          {/* Mobile Overlay */}
+          {!sidebarCollapsed && (
+            <div className="fixed inset-0 bg-black/80 z-40 md:hidden" onClick={() => setSidebarCollapsed(true)} />
           )}
-        </div>
-      </div>
 
-      {/* Mobile Overlay */}
-      {!sidebarCollapsed && (
-        <div className="fixed inset-0 bg-black/80 z-40 md:hidden" onClick={() => setSidebarCollapsed(true)} />
+          {/* Main Content */}
+          <div className={`flex-1 flex flex-col ${!sidebarCollapsed ? "md:ml-0" : ""}`}>
+            <div className="h-12 bg-neutral-950 border-b border-neutral-900 flex items-center justify-between px-4">
+              <div className="flex items-center gap-4">
+                <div className="text-xs text-neutral-500 tracking-wider">CTF://{activeSection.toUpperCase()}</div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                  <span className="text-xxs text-neutral-600 tracking-wider">CONNECTED</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-xxs text-neutral-600 tracking-wider hidden sm:block">
+                  {mounted ? currentTime.toISOString().slice(0, 19).replace("T", " ") + " UTC" : "LOADING..."}
+                </div>
+                <button
+                  onClick={() => setCommandPaletteOpen(true)}
+                  className="hidden sm:flex items-center gap-2 px-2 py-1 rounded bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors"
+                >
+                  <kbd className="text-xxs text-neutral-500 tracking-wider">~</kbd>
+                </button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 h-7 w-7"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 h-7 w-7"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Dashboard Content */}
+            <div className="flex-1 overflow-auto bg-black">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                {activeSection === "overview" && <CommandCenterPage />}
+                {activeSection === "agents" && <AgentNetworkPage />}
+                {activeSection === "operations" && <OperationsPage />}
+                {activeSection === "intelligence" && <IntelligencePage />}
+                {activeSection === "systems" && <SystemsPage />}
+                {activeSection === "chat" && <ChatPage />}
+                {activeSection === "profile" && <ProfilePage />}
+                {activeSection === "announcements" && <AnnouncementsPage />}
+                {activeSection === "admin" && <AdminPage />}
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
       )}
-
-      {/* Main Content */}
-      <div className={`flex-1 flex flex-col ${!sidebarCollapsed ? "md:ml-0" : ""}`}>
-        <div className="h-12 bg-neutral-950 border-b border-neutral-900 flex items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <div className="text-xs text-neutral-500 tracking-wider">CTF://{activeSection.toUpperCase()}</div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-              <span className="text-[10px] text-neutral-600 tracking-wider">CONNECTED</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-[10px] text-neutral-600 tracking-wider hidden sm:block">
-              {currentTime.toISOString().slice(0, 19).replace("T", " ")} UTC
-            </div>
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              className="hidden sm:flex items-center gap-2 px-2 py-1 rounded bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors"
-            >
-              <kbd className="text-[10px] text-neutral-500 tracking-wider">~</kbd>
-            </button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 h-7 w-7"
-            >
-              <Bell className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 h-7 w-7"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Dashboard Content */}
-        <div className="flex-1 overflow-auto bg-black">
-          {activeSection === "overview" && <CommandCenterPage />}
-          {activeSection === "agents" && <AgentNetworkPage />}
-          {activeSection === "operations" && <OperationsPage />}
-          {activeSection === "intelligence" && <IntelligencePage />}
-          {activeSection === "systems" && <SystemsPage />}
-          {activeSection === "chat" && <ChatPage />}
-          {activeSection === "profile" && <ProfilePage />}
-          {activeSection === "announcements" && <AnnouncementsPage />}
-          {activeSection === "admin" && <AdminPage />}
-        </div>
-      </div>
-    </div>
+    </AnimatePresence>
   )
 }

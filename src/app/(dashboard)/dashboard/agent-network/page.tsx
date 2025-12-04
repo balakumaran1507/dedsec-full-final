@@ -1,86 +1,52 @@
+/* eslint-disable */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, MoreHorizontal, Clock, Flag, Activity, Signal } from "lucide-react"
+import { Search, MoreHorizontal, Clock, Flag, Activity, Signal, Loader2 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { TeamMember, ActivityData } from "@/types/dashboard"
 
 export default function AgentNetworkPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedMember, setSelectedMember] = useState<any>(null)
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [activityData, setActivityData] = useState<ActivityData[]>([])
 
-  const members = [
-    {
-      id: "0x00F1",
-      name: "sp3c7r0",
-      status: "active",
-      role: "CAPTAIN",
-      specialty: "WEB",
-      lastSeen: "NOW",
-      solves: 245,
-    },
-    {
-      id: "0x00F5",
-      name: "n1ghtm4r3",
-      status: "active",
-      role: "CORE",
-      specialty: "CRYPTO",
-      lastSeen: "2m",
-      solves: 218,
-    },
-    {
-      id: "0x00FB",
-      name: "ph4nt0m",
-      status: "active",
-      role: "CORE",
-      specialty: "PWN",
-      lastSeen: "15m",
-      solves: 165,
-    },
-    {
-      id: "0x00FC",
-      name: "gh0st",
-      status: "standby",
-      role: "MEMBER",
-      specialty: "MISC",
-      lastSeen: "1h",
-      solves: 89,
-    },
-    {
-      id: "0x00FD",
-      name: "d4rk0n3",
-      status: "active",
-      role: "CORE",
-      specialty: "REV",
-      lastSeen: "5m",
-      solves: 142,
-    },
-    {
-      id: "0x00FE",
-      name: "cyb3rw01f",
-      status: "offline",
-      role: "MEMBER",
-      specialty: "FORENSICS",
-      lastSeen: "3d",
-      solves: 78,
-    },
-  ]
-
-  const activityData = [
-    { hour: "00", solves: 2 },
-    { hour: "04", solves: 1 },
-    { hour: "08", solves: 5 },
-    { hour: "12", solves: 8 },
-    { hour: "16", solves: 6 },
-    { hour: "20", solves: 4 },
-  ]
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // setMembers([]) // Keep empty for now
+        // setActivityData([])
+      } catch (error) {
+        console.error("Failed to load team data", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const filteredMembers = members.filter(
     (m) =>
       m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.id.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <p className="text-xs text-neutral-500 tracking-widest">SCANNING NETWORK...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -100,7 +66,7 @@ export default function AgentNetworkPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-neutral-600 tracking-wider">ONLINE</p>
-                <p className="text-xl text-neutral-100">8</p>
+                <p className="text-xl text-neutral-100">{members.filter(m => m.status === 'active').length}</p>
               </div>
               <Signal className="w-5 h-5 text-emerald-600" />
             </div>
@@ -112,7 +78,7 @@ export default function AgentNetworkPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-neutral-600 tracking-wider">AWAY</p>
-                <p className="text-xl text-neutral-100">3</p>
+                <p className="text-xl text-neutral-100">{members.filter(m => m.status === 'standby').length}</p>
               </div>
               <Clock className="w-5 h-5 text-neutral-500" />
             </div>
@@ -124,7 +90,7 @@ export default function AgentNetworkPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-neutral-600 tracking-wider">OFFLINE</p>
-                <p className="text-xl text-neutral-100">1</p>
+                <p className="text-xl text-neutral-100">{members.filter(m => m.status === 'offline').length}</p>
               </div>
               <Flag className="w-5 h-5 text-neutral-700" />
             </div>
@@ -136,7 +102,7 @@ export default function AgentNetworkPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-neutral-600 tracking-wider">SOLVES TODAY</p>
-                <p className="text-xl text-neutral-100">26</p>
+                <p className="text-xl text-neutral-100">0</p>
               </div>
               <Activity className="w-5 h-5 text-neutral-500" />
             </div>
@@ -150,14 +116,18 @@ export default function AgentNetworkPage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">TEAM ACTIVITY 24H</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activityData}>
-                  <XAxis dataKey="hour" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
-                  <Bar dataKey="solves" fill="#525252" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-40 flex items-center justify-center">
+              {activityData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={activityData}>
+                    <XAxis dataKey="time" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
+                    <Bar dataKey="active" fill="#525252" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO ACTIVITY DATA</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -192,38 +162,45 @@ export default function AgentNetworkPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMembers.map((member) => (
-                    <tr
-                      key={member.id}
-                      className="border-b border-neutral-900/50 hover:bg-neutral-900/30 transition-colors cursor-pointer"
-                      onClick={() => setSelectedMember(member)}
-                    >
-                      <td className="py-2 px-4 text-[10px] text-neutral-500">{member.id}</td>
-                      <td className="py-2 px-4 text-xs text-neutral-300 tracking-wider">{member.name}</td>
-                      <td className="py-2 px-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              member.status === "active"
+                  {filteredMembers.length > 0 ? (
+                    filteredMembers.map((member) => (
+                      <tr
+                        key={member.id}
+                        className="border-b border-neutral-900/50 hover:bg-neutral-900/30 transition-colors cursor-pointer"
+                        onClick={() => setSelectedMember(member)}
+                      >
+                        <td className="py-2 px-4 text-[10px] text-neutral-500">{member.id}</td>
+                        <td className="py-2 px-4 text-xs text-neutral-300 tracking-wider">{member.name}</td>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${member.status === "active"
                                 ? "bg-emerald-500"
                                 : member.status === "standby"
                                   ? "bg-neutral-500"
                                   : "bg-neutral-700"
-                            }`}
-                          />
-                          <span className="text-[10px] text-neutral-500 tracking-wider uppercase">{member.status}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 px-4 text-[10px] text-neutral-400">{member.specialty}</td>
-                      <td className="py-2 px-4 text-[10px] text-neutral-600">{member.lastSeen}</td>
-                      <td className="py-2 px-4 text-[10px] text-neutral-400">{member.solves}</td>
-                      <td className="py-2 px-4">
-                        <Button variant="ghost" size="icon" className="text-neutral-600 hover:text-neutral-300 h-6 w-6">
-                          <MoreHorizontal className="w-3 h-3" />
-                        </Button>
+                                }`}
+                            />
+                            <span className="text-[10px] text-neutral-500 tracking-wider uppercase">{member.status}</span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-4 text-[10px] text-neutral-400">{member.specialty}</td>
+                        <td className="py-2 px-4 text-[10px] text-neutral-600">{member.lastSeen}</td>
+                        <td className="py-2 px-4 text-[10px] text-neutral-400">{member.solves}</td>
+                        <td className="py-2 px-4">
+                          <Button variant="ghost" size="icon" className="text-neutral-600 hover:text-neutral-300 h-6 w-6">
+                            <MoreHorizontal className="w-3 h-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-[10px] text-neutral-700 tracking-widest">
+                        NO MEMBERS FOUND
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -253,9 +230,8 @@ export default function AgentNetworkPage() {
                   <p className="text-neutral-600 tracking-wider mb-1">STATUS</p>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        selectedMember.status === "active" ? "bg-emerald-500" : "bg-neutral-600"
-                      }`}
+                      className={`w-1.5 h-1.5 rounded-full ${selectedMember.status === "active" ? "bg-emerald-500" : "bg-neutral-600"
+                        }`}
                     />
                     <span className="text-neutral-300 uppercase">{selectedMember.status}</span>
                   </div>

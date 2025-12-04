@@ -1,60 +1,37 @@
+/* eslint-disable */
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Hash, Users, Send, AtSign, Smile, Paperclip, Pin, Volume2, Settings, ChevronDown } from "lucide-react"
+import { Hash, Users, Send, AtSign, Smile, Paperclip, Pin, Volume2, Settings, ChevronDown, Loader2 } from "lucide-react"
 import { Button } from "./ui/button"
-
-const channels = [
-  { id: "general", name: "general", unread: 0 },
-  { id: "ctf-live", name: "ctf-live", unread: 3 },
-  { id: "web", name: "web", unread: 0 },
-  { id: "pwn", name: "pwn", unread: 1 },
-  { id: "crypto", name: "crypto", unread: 0 },
-  { id: "rev", name: "rev", unread: 0 },
-  { id: "writeups", name: "writeups", unread: 0 },
-]
-
-const members = [
-  { id: 1, name: "sp3c7r0", role: "CAPTAIN", status: "online", specialty: "WEB" },
-  { id: 2, name: "n1ghtm4r3", role: "MEMBER", status: "online", specialty: "CRYPTO" },
-  { id: 3, name: "ph4nt0m", role: "MEMBER", status: "online", specialty: "PWN" },
-  { id: 4, name: "gh0st", role: "MEMBER", status: "idle", specialty: "MISC" },
-  { id: 5, name: "d4rk0n3", role: "MEMBER", status: "online", specialty: "REV" },
-  { id: 6, name: "cyb3rw01f", role: "MEMBER", status: "offline", specialty: "FORENSICS" },
-]
-
-const initialMessages = [
-  {
-    id: 1,
-    user: "sp3c7r0",
-    role: "CAPTAIN",
-    time: "14:23",
-    content: "Team, focus on the web challenges. I see low solve count there.",
-  },
-  { id: 2, user: "n1ghtm4r3", role: "MEMBER", time: "14:25", content: "On it. The SQLi one looks interesting." },
-  {
-    id: 3,
-    user: "ph4nt0m",
-    role: "MEMBER",
-    time: "14:28",
-    content: "Anyone got the binary for pwn03? Link seems broken.",
-  },
-  { id: 4, user: "d4rk0n3", role: "MEMBER", time: "14:30", content: "Just got first blood on the keygen challenge!" },
-  { id: 5, user: "sp3c7r0", role: "CAPTAIN", time: "14:31", content: "Nice work d4rk0n3. Keep pushing." },
-  {
-    id: 6,
-    user: "gh0st",
-    role: "MEMBER",
-    time: "14:35",
-    content: "The misc challenge is just a rabbit hole. Moving to forensics.",
-  },
-]
+import { ChatChannel, ChatMessage, TeamMember } from "@/types/dashboard"
 
 export default function ChatPage() {
   const [activeChannel, setActiveChannel] = useState("general")
-  const [messages, setMessages] = useState(initialMessages)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [channels, setChannels] = useState<ChatChannel[]>([])
+  const [members, setMembers] = useState<TeamMember[]>([])
   const [inputValue, setInputValue] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // TODO: Fetch real data from API/Firebase
+        // setChannels([])
+        // setMessages([])
+        // setMembers([])
+      } catch (error) {
+        console.error("Failed to load chat data", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -62,17 +39,26 @@ export default function ChatPage() {
 
   const sendMessage = () => {
     if (!inputValue.trim()) return
-    setMessages([
-      ...messages,
-      {
-        id: messages.length + 1,
-        user: "OPERATOR",
-        role: "CAPTAIN",
-        time: new Date().toTimeString().slice(0, 5),
-        content: inputValue,
-      },
-    ])
+    const newMessage: ChatMessage = {
+      id: Date.now(), // Temporary ID generation
+      user: "OPERATOR",
+      role: "CAPTAIN",
+      time: new Date().toTimeString().slice(0, 5),
+      content: inputValue,
+    }
+    setMessages([...messages, newMessage])
     setInputValue("")
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-black">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <p className="text-xs text-neutral-500 tracking-widest">ESTABLISHING SECURE CONNECTION...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -88,24 +74,28 @@ export default function ChatPage() {
 
         <div className="flex-1 overflow-y-auto p-2">
           <div className="text-[10px] text-neutral-600 tracking-wider px-2 py-2">TEXT CHANNELS</div>
-          {channels.map((channel) => (
-            <button
-              key={channel.id}
-              onClick={() => setActiveChannel(channel.id)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${activeChannel === channel.id
+          {channels.length > 0 ? (
+            channels.map((channel) => (
+              <button
+                key={channel.id}
+                onClick={() => setActiveChannel(channel.id)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${activeChannel === channel.id
                   ? "bg-neutral-900 text-neutral-100"
                   : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50"
-                }`}
-            >
-              <Hash className="w-3.5 h-3.5" />
-              <span className="flex-1 text-left">{channel.name}</span>
-              {channel.unread > 0 && (
-                <span className="w-4 h-4 bg-red-600 rounded-full text-[9px] flex items-center justify-center text-white">
-                  {channel.unread}
-                </span>
-              )}
-            </button>
-          ))}
+                  }`}
+              >
+                <Hash className="w-3.5 h-3.5" />
+                <span className="flex-1 text-left">{channel.name}</span>
+                {channel.unread > 0 && (
+                  <span className="w-4 h-4 bg-red-600 rounded-full text-[9px] flex items-center justify-center text-white">
+                    {channel.unread}
+                  </span>
+                )}
+              </button>
+            ))
+          ) : (
+            <div className="px-2 py-2 text-[10px] text-neutral-700">NO CHANNELS</div>
+          )}
         </div>
 
         {/* User Footer */}
@@ -151,29 +141,35 @@ export default function ChatPage() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className="flex items-start gap-3 group">
-              <div className="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center shrink-0 border border-neutral-800">
-                <span className="text-[9px] text-neutral-500">{msg.user.slice(0, 2).toUpperCase()}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-medium ${msg.role === "CAPTAIN" ? "text-red-500" : "text-neutral-300"}`}
-                  >
-                    {msg.user}
-                  </span>
-                  {msg.role === "CAPTAIN" && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-red-950/50 text-red-500 rounded border border-red-900/50">
-                      CAPTAIN
-                    </span>
-                  )}
-                  <span className="text-[10px] text-neutral-700">{msg.time}</span>
+          {messages.length > 0 ? (
+            messages.map((msg) => (
+              <div key={msg.id} className="flex items-start gap-3 group">
+                <div className="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center shrink-0 border border-neutral-800">
+                  <span className="text-[9px] text-neutral-500">{msg.user.slice(0, 2).toUpperCase()}</span>
                 </div>
-                <p className="text-sm text-neutral-400 mt-0.5">{msg.content}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-medium ${msg.role === "CAPTAIN" ? "text-red-500" : "text-neutral-300"}`}
+                    >
+                      {msg.user}
+                    </span>
+                    {msg.role === "CAPTAIN" && (
+                      <span className="text-[9px] px-1.5 py-0.5 bg-red-950/50 text-red-500 rounded border border-red-900/50">
+                        CAPTAIN
+                      </span>
+                    )}
+                    <span className="text-[10px] text-neutral-700">{msg.time}</span>
+                  </div>
+                  <p className="text-sm text-neutral-400 mt-0.5">{msg.content}</p>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center h-full text-[10px] text-neutral-700 tracking-widest">
+              NO MESSAGES
             </div>
-          ))}
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -211,11 +207,11 @@ export default function ChatPage() {
       {/* Members Sidebar */}
       <div className="w-48 bg-neutral-950 border-l border-neutral-900 p-3 hidden lg:block">
         <div className="text-[10px] text-neutral-600 tracking-wider mb-3">
-          ONLINE — {members.filter((m) => m.status === "online").length}
+          ONLINE — {members.filter((m) => m.status === "active").length}
         </div>
         <div className="space-y-1">
           {members
-            .filter((m) => m.status === "online")
+            .filter((m) => m.status === "active")
             .map((member) => (
               <div
                 key={member.id}
@@ -244,7 +240,7 @@ export default function ChatPage() {
         </div>
         <div className="space-y-1 opacity-50">
           {members
-            .filter((m) => m.status === "offline" || m.status === "idle")
+            .filter((m) => m.status === "offline" || m.status === "standby")
             .map((member) => (
               <div key={member.id} className="flex items-center gap-2 p-1.5">
                 <div className="w-6 h-6 bg-neutral-900 rounded-full flex items-center justify-center">

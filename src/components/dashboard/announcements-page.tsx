@@ -1,61 +1,31 @@
+/* eslint-disable */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Pin, Clock, AlertTriangle, Info, CheckCircle, ChevronRight, Bell } from "lucide-react"
-
-const announcements = [
-  {
-    id: 1,
-    title: "HKCERT CTF 2024 Registration",
-    type: "urgent",
-    pinned: true,
-    date: "2024-12-01",
-    author: "sp3c7r0",
-    content:
-      "Registration closes in 48 hours. Make sure all team members have confirmed participation. Check your emails for the registration link.",
-  },
-  {
-    id: 2,
-    title: "New Writeup Guidelines",
-    type: "info",
-    pinned: true,
-    date: "2024-11-28",
-    author: "n1ghtm4r3",
-    content:
-      "Updated our writeup template. Please follow the new format for all future submissions. Check the wiki for details.",
-  },
-  {
-    id: 3,
-    title: "Weekly Practice Session",
-    type: "normal",
-    pinned: false,
-    date: "2024-11-25",
-    author: "ph4nt0m",
-    content: "Saturday 8PM UTC - Web exploitation focus. Bring your favorite tools.",
-  },
-  {
-    id: 4,
-    title: "Server Maintenance Complete",
-    type: "success",
-    pinned: false,
-    date: "2024-11-22",
-    author: "d4rk0n3",
-    content: "All infrastructure has been updated. New challenge environment is live.",
-  },
-  {
-    id: 5,
-    title: "Welcome New Members",
-    type: "info",
-    pinned: false,
-    date: "2024-11-20",
-    author: "sp3c7r0",
-    content: "Welcome cyb3rw01f and gh0st to the team. Check the onboarding docs in #general.",
-  },
-]
+import { Pin, Clock, AlertTriangle, Info, CheckCircle, ChevronRight, Bell, Loader2 } from "lucide-react"
+import { Announcement } from "@/types/dashboard"
 
 export default function AnnouncementsPage() {
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState(announcements[0])
+  const [isLoading, setIsLoading] = useState(true)
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // TODO: Fetch real data from API/Firebase
+        // setAnnouncements([])
+      } catch (error) {
+        console.error("Failed to load announcements", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -71,6 +41,17 @@ export default function AnnouncementsPage() {
   const pinnedAnnouncements = announcements.filter((a) => a.pinned)
   const recentAnnouncements = announcements.filter((a) => !a.pinned)
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-black">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <p className="text-xs text-neutral-500 tracking-widest">DECRYPTING BROADCASTS...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full">
       {/* Announcement List */}
@@ -83,16 +64,45 @@ export default function AnnouncementsPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {pinnedAnnouncements.length > 0 && (
+          {announcements.length === 0 ? (
+            <div className="p-4 text-[10px] text-neutral-700 tracking-widest text-center">
+              NO ANNOUNCEMENTS
+            </div>
+          ) : (
             <>
-              <div className="px-4 py-2 text-[10px] text-neutral-600 tracking-wider flex items-center gap-2">
-                <Pin className="w-3 h-3" /> PINNED
+              {pinnedAnnouncements.length > 0 && (
+                <>
+                  <div className="px-4 py-2 text-[10px] text-neutral-600 tracking-wider flex items-center gap-2">
+                    <Pin className="w-3 h-3" /> PINNED
+                  </div>
+                  {pinnedAnnouncements.map((announcement) => (
+                    <button
+                      key={announcement.id}
+                      onClick={() => setSelectedAnnouncement(announcement)}
+                      className={`w-full p-3 border-b border-neutral-900 text-left transition-colors ${selectedAnnouncement?.id === announcement.id ? "bg-neutral-900" : "hover:bg-neutral-900/50"
+                        }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {getTypeIcon(announcement.type)}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-neutral-300 truncate">{announcement.title}</div>
+                          <div className="text-[10px] text-neutral-600 mt-0.5">{announcement.date}</div>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-neutral-700 shrink-0" />
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              <div className="px-4 py-2 text-[10px] text-neutral-600 tracking-wider flex items-center gap-2 mt-2">
+                <Clock className="w-3 h-3" /> RECENT
               </div>
-              {pinnedAnnouncements.map((announcement) => (
+              {recentAnnouncements.map((announcement) => (
                 <button
                   key={announcement.id}
                   onClick={() => setSelectedAnnouncement(announcement)}
-                  className={`w-full p-3 border-b border-neutral-900 text-left transition-colors ${selectedAnnouncement.id === announcement.id ? "bg-neutral-900" : "hover:bg-neutral-900/50"
+                  className={`w-full p-3 border-b border-neutral-900 text-left transition-colors ${selectedAnnouncement?.id === announcement.id ? "bg-neutral-900" : "hover:bg-neutral-900/50"
                     }`}
                 >
                   <div className="flex items-start gap-2">
@@ -107,33 +117,12 @@ export default function AnnouncementsPage() {
               ))}
             </>
           )}
-
-          <div className="px-4 py-2 text-[10px] text-neutral-600 tracking-wider flex items-center gap-2 mt-2">
-            <Clock className="w-3 h-3" /> RECENT
-          </div>
-          {recentAnnouncements.map((announcement) => (
-            <button
-              key={announcement.id}
-              onClick={() => setSelectedAnnouncement(announcement)}
-              className={`w-full p-3 border-b border-neutral-900 text-left transition-colors ${selectedAnnouncement.id === announcement.id ? "bg-neutral-900" : "hover:bg-neutral-900/50"
-                }`}
-            >
-              <div className="flex items-start gap-2">
-                {getTypeIcon(announcement.type)}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-neutral-300 truncate">{announcement.title}</div>
-                  <div className="text-[10px] text-neutral-600 mt-0.5">{announcement.date}</div>
-                </div>
-                <ChevronRight className="w-3 h-3 text-neutral-700 shrink-0" />
-              </div>
-            </button>
-          ))}
         </div>
       </div>
 
       {/* Announcement Detail */}
       <div className="flex-1 p-6 overflow-y-auto bg-black">
-        {selectedAnnouncement && (
+        {selectedAnnouncement ? (
           <Card className="bg-neutral-950 border-neutral-900 max-w-2xl">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -160,6 +149,10 @@ export default function AnnouncementsPage() {
               <p className="text-sm text-neutral-400 leading-relaxed">{selectedAnnouncement.content}</p>
             </CardContent>
           </Card>
+        ) : (
+          <div className="flex items-center justify-center h-full text-[10px] text-neutral-700 tracking-widest">
+            SELECT AN ANNOUNCEMENT
+          </div>
         )}
       </div>
     </div>

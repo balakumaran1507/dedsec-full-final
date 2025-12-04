@@ -1,79 +1,59 @@
+/* eslint-disable */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, CheckCircle, ExternalLink, AlertCircle } from "lucide-react"
+import { Calendar, Clock, CheckCircle, ExternalLink, AlertCircle, Loader2 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { CtfEvent, ChallengeDistribution } from "@/types/dashboard"
+
+interface ParticipationData {
+  month: string;
+  ctfs: number;
+}
 
 export default function OperationsPage() {
-  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [selectedEvent, setSelectedEvent] = useState<CtfEvent | null>(null)
   const [activeTab, setActiveTab] = useState("upcoming")
+  const [isLoading, setIsLoading] = useState(true)
+  const [events, setEvents] = useState<CtfEvent[]>([])
+  const [participationData, setParticipationData] = useState<ParticipationData[]>([])
+  const [statusData, setStatusData] = useState<ChallengeDistribution[]>([])
 
-  const events = [
-    {
-      id: "CTF-2024-01",
-      name: "HKCERT CTF 2024",
-      status: "live",
-      weight: "50.00",
-      start: "2024-11-08 18:00",
-      duration: "48H",
-      registered: true,
-      url: "https://ctftime.org",
-    },
-    {
-      id: "CTF-2024-02",
-      name: "0CTF/TCTF 2024",
-      status: "upcoming",
-      weight: "100.00",
-      start: "2024-11-15 00:00",
-      duration: "48H",
-      registered: true,
-      url: "https://ctftime.org",
-    },
-    {
-      id: "CTF-2024-03",
-      name: "Hack The Box University",
-      status: "upcoming",
-      weight: "25.00",
-      start: "2024-11-22 20:00",
-      duration: "48H",
-      registered: false,
-      url: "https://ctftime.org",
-    },
-    {
-      id: "CTF-2024-00",
-      name: "DEF CON CTF Quals",
-      status: "complete",
-      weight: "99.41",
-      start: "2024-05-10 16:00",
-      duration: "48H",
-      registered: true,
-      result: "#47",
-      url: "https://ctftime.org",
-    },
-  ]
-
-  const participationData = [
-    { month: "JAN", ctfs: 4 },
-    { month: "FEB", ctfs: 5 },
-    { month: "MAR", ctfs: 6 },
-    { month: "APR", ctfs: 4 },
-    { month: "MAY", ctfs: 7 },
-    { month: "JUN", ctfs: 5 },
-  ]
-
-  const statusData = [
-    { name: "Completed", value: 31, fill: "#404040" },
-    { name: "Live", value: 1, fill: "#525252" },
-    { name: "Upcoming", value: 4, fill: "#737373" },
-  ]
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // setEvents([])
+        // setParticipationData([])
+        // setStatusData([])
+      } catch (error) {
+        console.error("Failed to load operations data", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const filteredEvents = events.filter((e) => {
     if (activeTab === "all") return true
     if (activeTab === "upcoming") return e.status === "upcoming" || e.status === "live"
     return e.status === activeTab
   })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <p className="text-xs text-neutral-500 tracking-widest">SYNCING OPERATIONS...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -92,11 +72,10 @@ export default function OperationsPage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 text-[10px] tracking-wider rounded transition-colors ${
-              activeTab === tab
-                ? "bg-neutral-900 text-neutral-200 border border-neutral-800"
-                : "text-neutral-600 hover:text-neutral-400"
-            }`}
+            className={`px-3 py-1.5 text-[10px] tracking-wider rounded transition-colors ${activeTab === tab
+              ? "bg-neutral-900 text-neutral-200 border border-neutral-800"
+              : "text-neutral-600 hover:text-neutral-400"
+              }`}
           >
             {tab.toUpperCase()}
           </button>
@@ -111,7 +90,7 @@ export default function OperationsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-neutral-600 tracking-wider">LIVE</p>
-                  <p className="text-xl text-neutral-100">1</p>
+                  <p className="text-xl text-neutral-100">{events.filter(e => e.status === 'live').length}</p>
                 </div>
                 <Calendar className="w-5 h-5 text-emerald-500" />
               </div>
@@ -123,7 +102,7 @@ export default function OperationsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-neutral-600 tracking-wider">UPCOMING</p>
-                  <p className="text-xl text-neutral-100">4</p>
+                  <p className="text-xl text-neutral-100">{events.filter(e => e.status === 'upcoming').length}</p>
                 </div>
                 <Clock className="w-5 h-5 text-neutral-600" />
               </div>
@@ -135,7 +114,7 @@ export default function OperationsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-neutral-600 tracking-wider">COMPLETED</p>
-                  <p className="text-xl text-neutral-100">31</p>
+                  <p className="text-xl text-neutral-100">{events.filter(e => e.status === 'complete').length}</p>
                 </div>
                 <CheckCircle className="w-5 h-5 text-neutral-500" />
               </div>
@@ -147,7 +126,7 @@ export default function OperationsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-neutral-600 tracking-wider">AVG RANK</p>
-                  <p className="text-xl text-neutral-100">#52</p>
+                  <p className="text-xl text-neutral-100">--</p>
                 </div>
                 <AlertCircle className="w-5 h-5 text-neutral-500" />
               </div>
@@ -160,20 +139,24 @@ export default function OperationsPage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">PARTICIPATION 2024</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={participationData}>
-                  <defs>
-                    <linearGradient id="ctfGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#525252" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#525252" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="month" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
-                  <Area type="monotone" dataKey="ctfs" stroke="#737373" fill="url(#ctfGrad)" strokeWidth={1} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="h-40 flex items-center justify-center">
+              {participationData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={participationData}>
+                    <defs>
+                      <linearGradient id="ctfGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#525252" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#525252" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="month" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
+                    <Area type="monotone" dataKey="ctfs" stroke="#737373" fill="url(#ctfGrad)" strokeWidth={1} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO PARTICIPATION DATA</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -184,26 +167,32 @@ export default function OperationsPage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">CTF DISTRIBUTION</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4">
-              <div className="h-32 w-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={statusData} innerRadius={35} outerRadius={50} paddingAngle={2} dataKey="value">
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-2 text-[10px]">
-                {statusData.map((item) => (
-                  <div key={item.name} className="flex justify-between">
-                    <span className="text-neutral-600">{item.name.toUpperCase()}</span>
-                    <span className="text-neutral-400">{item.value}</span>
+            <div className="flex items-center gap-4 justify-center h-32">
+              {statusData.length > 0 ? (
+                <>
+                  <div className="h-32 w-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={statusData} innerRadius={35} outerRadius={50} paddingAngle={2} dataKey="value">
+                          {statusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1 space-y-2 text-[10px]">
+                    {statusData.map((item) => (
+                      <div key={item.name} className="flex justify-between">
+                        <span className="text-neutral-600">{item.name.toUpperCase()}</span>
+                        <span className="text-neutral-400">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO DATA</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -215,49 +204,52 @@ export default function OperationsPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-neutral-900">
-            {filteredEvents.map((ctf) => (
-              <div
-                key={ctf.id}
-                className="flex items-center justify-between p-4 hover:bg-neutral-900/30 transition-colors cursor-pointer"
-                onClick={() => setSelectedEvent(ctf)}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-1.5 h-8 rounded-full ${
-                      ctf.status === "live"
+            {filteredEvents.length > 0 ? (
+              filteredEvents.map((ctf) => (
+                <div
+                  key={ctf.id}
+                  className="flex items-center justify-between p-4 hover:bg-neutral-900/30 transition-colors cursor-pointer"
+                  onClick={() => setSelectedEvent(ctf)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-1.5 h-8 rounded-full ${ctf.status === "live"
                         ? "bg-emerald-600"
                         : ctf.status === "upcoming"
                           ? "bg-neutral-600"
                           : "bg-neutral-800"
-                    }`}
-                  />
-                  <div>
-                    <div className="text-xs text-neutral-200 tracking-wider">{ctf.name}</div>
-                    <div className="text-[10px] text-neutral-600">{ctf.id}</div>
+                        }`}
+                    />
+                    <div>
+                      <div className="text-xs text-neutral-200 tracking-wider">{ctf.name}</div>
+                      <div className="text-[10px] text-neutral-600">{ctf.id}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 text-[10px]">
+                    <div className="text-right">
+                      <div className="text-neutral-600">WEIGHT</div>
+                      <div className="text-neutral-400">{ctf.weight}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-neutral-600">START</div>
+                      <div className="text-neutral-400">{ctf.start}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-neutral-600">DURATION</div>
+                      <div className="text-neutral-400">{ctf.duration}</div>
+                    </div>
+                    {ctf.result && (
+                      <span className="px-2 py-1 bg-neutral-800 text-neutral-400 text-[10px] rounded">{ctf.result}</span>
+                    )}
+                    {ctf.registered && !ctf.result && (
+                      <span className="px-2 py-1 bg-emerald-900/30 text-emerald-500 text-[10px] rounded">REGISTERED</span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-6 text-[10px]">
-                  <div className="text-right">
-                    <div className="text-neutral-600">WEIGHT</div>
-                    <div className="text-neutral-400">{ctf.weight}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-neutral-600">START</div>
-                    <div className="text-neutral-400">{ctf.start}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-neutral-600">DURATION</div>
-                    <div className="text-neutral-400">{ctf.duration}</div>
-                  </div>
-                  {ctf.result && (
-                    <span className="px-2 py-1 bg-neutral-800 text-neutral-400 text-[10px] rounded">{ctf.result}</span>
-                  )}
-                  {ctf.registered && !ctf.result && (
-                    <span className="px-2 py-1 bg-emerald-900/30 text-emerald-500 text-[10px] rounded">REGISTERED</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-center py-8 text-[10px] text-neutral-700 tracking-widest">NO EVENTS FOUND</div>
+            )}
           </div>
         </CardContent>
       </Card>

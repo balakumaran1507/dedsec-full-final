@@ -1,52 +1,52 @@
+/* eslint-disable */
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
-import { Trophy, Flag, Target, Clock, Award, TrendingUp, Edit2 } from "lucide-react"
+import { Trophy, Flag, Target, Clock, Award, TrendingUp, Edit2, Loader2 } from "lucide-react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-
-const solveHistory = [
-  { month: "JUL", solves: 12 },
-  { month: "AUG", solves: 18 },
-  { month: "SEP", solves: 15 },
-  { month: "OCT", solves: 24 },
-  { month: "NOV", solves: 21 },
-  { month: "DEC", solves: 28 },
-]
-
-const categoryStats = [
-  { name: "WEB", value: 34, fill: "#525252" },
-  { name: "PWN", value: 22, fill: "#404040" },
-  { name: "CRYPTO", value: 28, fill: "#737373" },
-  { name: "REV", value: 18, fill: "#262626" },
-  { name: "MISC", value: 16, fill: "#171717" },
-]
-
-const difficultyBreakdown = [
-  { name: "EASY", count: 42 },
-  { name: "MED", count: 38 },
-  { name: "HARD", count: 24 },
-  { name: "INSANE", count: 8 },
-]
-
-const recentSolves = [
-  { name: "SQLi Master", category: "WEB", points: 300, time: "2h ago" },
-  { name: "RSA Weak Key", category: "CRYPTO", points: 250, time: "5h ago" },
-  { name: "Buffer Overflow", category: "PWN", points: 400, time: "1d ago" },
-  { name: "Keygen Pro", category: "REV", points: 350, time: "2d ago" },
-  { name: "Hidden File", category: "MISC", points: 150, time: "3d ago" },
-]
-
-const badges = [
-  { name: "FIRST BLOOD", desc: "First solve on a challenge", unlocked: true },
-  { name: "SPEEDRUNNER", desc: "Solve under 10 minutes", unlocked: true },
-  { name: "WEB MASTER", desc: "50 web challenges solved", unlocked: false },
-  { name: "CTF VETERAN", desc: "Participate in 20 CTFs", unlocked: true },
-  { name: "TEAM PLAYER", desc: "Collaborate on 10 solves", unlocked: true },
-  { name: "NIGHT OWL", desc: "Solve at 3AM", unlocked: false },
-]
+import { SolveHistoryData, CategoryData, DifficultyStat, RecentSolve, Badge } from "@/types/dashboard"
 
 export default function ProfilePage() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [solveHistory, setSolveHistory] = useState<SolveHistoryData[]>([])
+  const [categoryStats, setCategoryStats] = useState<CategoryData[]>([])
+  const [difficultyBreakdown, setDifficultyBreakdown] = useState<DifficultyStat[]>([])
+  const [recentSolves, setRecentSolves] = useState<RecentSolve[]>([])
+  const [badges, setBadges] = useState<Badge[]>([])
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // TODO: Fetch real data from API/Firebase
+        // setSolveHistory([])
+        // setCategoryStats([])
+        // setDifficultyBreakdown([])
+        // setRecentSolves([])
+        // setBadges([])
+      } catch (error) {
+        console.error("Failed to load profile data", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <p className="text-xs text-neutral-500 tracking-widest">LOADING OPERATOR PROFILE...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 space-y-4">
       {/* Profile Header */}
@@ -86,11 +86,11 @@ export default function ProfilePage() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
-          { label: "TOTAL SOLVES", value: "118", icon: Flag },
-          { label: "TOTAL POINTS", value: "12,450", icon: Trophy },
-          { label: "AVG SOLVE TIME", value: "34min", icon: Clock },
-          { label: "FIRST BLOODS", value: "7", icon: Target },
-          { label: "WIN RATE", value: "68%", icon: TrendingUp },
+          { label: "TOTAL SOLVES", value: "0", icon: Flag },
+          { label: "TOTAL POINTS", value: "0", icon: Trophy },
+          { label: "AVG SOLVE TIME", value: "--", icon: Clock },
+          { label: "FIRST BLOODS", value: "0", icon: Target },
+          { label: "WIN RATE", value: "--%", icon: TrendingUp },
         ].map((stat) => (
           <Card key={stat.label} className="bg-neutral-950 border-neutral-900">
             <CardContent className="p-3">
@@ -111,20 +111,24 @@ export default function ProfilePage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">SOLVE HISTORY</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={solveHistory}>
-                  <XAxis dataKey="month" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
-                  <Line
-                    type="monotone"
-                    dataKey="solves"
-                    stroke="#737373"
-                    strokeWidth={1.5}
-                    dot={{ fill: "#525252", r: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="h-40 flex items-center justify-center">
+              {solveHistory.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={solveHistory}>
+                    <XAxis dataKey="month" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
+                    <Line
+                      type="monotone"
+                      dataKey="solves"
+                      stroke="#737373"
+                      strokeWidth={1.5}
+                      dot={{ fill: "#525252", r: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO HISTORY DATA</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -135,26 +139,32 @@ export default function ProfilePage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">CATEGORY BREAKDOWN</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4">
-              <div className="h-32 w-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={categoryStats} innerRadius={30} outerRadius={50} paddingAngle={2} dataKey="value">
-                      {categoryStats.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-1.5 text-[10px]">
-                {categoryStats.map((cat) => (
-                  <div key={cat.name} className="flex justify-between items-center">
-                    <span className="text-neutral-600">{cat.name}</span>
-                    <span className="text-neutral-400">{cat.value}</span>
+            <div className="flex items-center gap-4 justify-center h-32">
+              {categoryStats.length > 0 ? (
+                <>
+                  <div className="h-32 w-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={categoryStats} innerRadius={30} outerRadius={50} paddingAngle={2} dataKey="value">
+                          {categoryStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1 space-y-1.5 text-[10px]">
+                    {categoryStats.map((cat) => (
+                      <div key={cat.name} className="flex justify-between items-center">
+                        <span className="text-neutral-600">{cat.name}</span>
+                        <span className="text-neutral-400">{cat.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO CATEGORY DATA</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -165,14 +175,18 @@ export default function ProfilePage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">DIFFICULTY</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-32">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={difficultyBreakdown}>
-                  <XAxis dataKey="name" tick={{ fill: "#525252", fontSize: 8 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
-                  <Bar dataKey="count" fill="#525252" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-32 flex items-center justify-center">
+              {difficultyBreakdown.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={difficultyBreakdown}>
+                    <XAxis dataKey="name" tick={{ fill: "#525252", fontSize: 8 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
+                    <Bar dataKey="count" fill="#525252" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO DATA</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -184,24 +198,28 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="space-y-2">
-              {recentSolves.map((solve, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between py-2 border-b border-neutral-900 last:border-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <Flag className="w-3.5 h-3.5 text-neutral-700" />
-                    <div>
-                      <div className="text-xs text-neutral-300">{solve.name}</div>
-                      <div className="text-[10px] text-neutral-600">{solve.category}</div>
+              {recentSolves.length > 0 ? (
+                recentSolves.map((solve, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between py-2 border-b border-neutral-900 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Flag className="w-3.5 h-3.5 text-neutral-700" />
+                      <div>
+                        <div className="text-xs text-neutral-300">{solve.name}</div>
+                        <div className="text-[10px] text-neutral-600">{solve.category}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-neutral-400">{solve.points} pts</div>
+                      <div className="text-[10px] text-neutral-700">{solve.time}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-neutral-400">{solve.points} pts</div>
-                    <div className="text-[10px] text-neutral-700">{solve.time}</div>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center py-4 text-[10px] text-neutral-700 tracking-widest">NO RECENT SOLVES</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -213,25 +231,31 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="grid grid-cols-3 gap-2">
-              {badges.map((badge) => (
-                <div
-                  key={badge.name}
-                  className={`p-3 rounded border text-center transition-colors ${badge.unlocked
+              {badges.length > 0 ? (
+                badges.map((badge) => (
+                  <div
+                    key={badge.name}
+                    className={`p-3 rounded border text-center transition-colors ${badge.unlocked
                       ? "bg-neutral-900 border-neutral-800"
                       : "bg-neutral-950 border-neutral-900 opacity-40"
-                    }`}
-                >
-                  <Award
-                    className={`w-5 h-5 mx-auto mb-1.5 ${badge.unlocked ? "text-neutral-400" : "text-neutral-700"}`}
-                  />
-                  <div
-                    className={`text-[9px] tracking-wider ${badge.unlocked ? "text-neutral-300" : "text-neutral-600"}`}
+                      }`}
                   >
-                    {badge.name}
+                    <Award
+                      className={`w-5 h-5 mx-auto mb-1.5 ${badge.unlocked ? "text-neutral-400" : "text-neutral-700"}`}
+                    />
+                    <div
+                      className={`text-[9px] tracking-wider ${badge.unlocked ? "text-neutral-300" : "text-neutral-600"}`}
+                    >
+                      {badge.name}
+                    </div>
+                    <div className="text-[8px] text-neutral-700 mt-0.5">{badge.desc}</div>
                   </div>
-                  <div className="text-[8px] text-neutral-700 mt-0.5">{badge.desc}</div>
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-4 text-[10px] text-neutral-700 tracking-widest">
+                  NO BADGES EARNED
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

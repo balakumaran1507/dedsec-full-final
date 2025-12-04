@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Share_Tech_Mono, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { ClientProviders } from "@/components/providers/ClientProviders";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -40,7 +41,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfair.variable} ${geistMono.variable} ${shareTechMono.variable} font-sans antialiased bg-background text-foreground`}
       >
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

@@ -10,8 +10,10 @@
 
 @layer base {
   :root {
+    font-size: 20px;
+    /* Scaled up to ~125% of base */
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    
+
     /* Dark enterprise theme - black/gray with rare red */
     --background: 0 0% 0%;
     --foreground: 0 0% 90%;
@@ -27,23 +29,23 @@
     --muted-foreground: 0 0% 50%;
     --accent: 0 0% 15%;
     --accent-foreground: 0 0% 90%;
-    
+
     /* Red only for destructive/critical elements */
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 98%;
-    
+
     --border: 0 0% 12%;
     --input: 0 0% 12%;
     --ring: 0 0% 50%;
-    
+
     --chart-1: 0 0% 40%;
     --chart-2: 0 0% 35%;
     --chart-3: 0 0% 30%;
     --chart-4: 0 0% 25%;
     --chart-5: 0 0% 20%;
-    
+
     --radius: 0.25rem;
-    
+
     --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 0 0% 90%;
@@ -94,6 +96,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -138,6 +141,7 @@
   from {
     transform: translateX(0);
   }
+
   to {
     transform: translateX(-50%);
   }
@@ -147,6 +151,7 @@
   from {
     transform: translateX(-50%);
   }
+
   to {
     transform: translateX(0);
   }
