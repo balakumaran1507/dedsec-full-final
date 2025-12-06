@@ -83,7 +83,7 @@ export function Contact() {
           transition={{ duration: 0.8 }}
           className="mb-16 md:mb-24"
         >
-          <p className="font-mono text-xs md:text-sm tracking-[0.3em] text-white/50 mb-4">
+          <p className="font-mono text-[10px] md:text-xs tracking-[0.15em] text-white/50 mb-4">
             <span className="text-red-500">08</span> — TRANSMISSION
           </p>
           <h2 className="font-sans text-5xl md:text-8xl font-bold tracking-tighter leading-[0.9]">

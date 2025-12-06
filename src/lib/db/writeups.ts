@@ -37,6 +37,7 @@ import {
 } from '@/types/writeup';
 import { calculateHotScore } from '../utils/scoring';
 import { incrementUserStats, getUser } from './user';
+import { logWriteupCreated } from './activityFeed';
 
 // Collection name
 const WRITEUPS_COLLECTION = 'writeups';
@@ -79,6 +80,23 @@ export async function createWriteup(
 
     // Update author's stats
     await incrementUserStats(data.authorUid, { writeupCount: 1 });
+
+    // Log activity (fire and forget - don't block on errors)
+    try {
+      const author = await getUser(data.authorUid);
+      if (author) {
+        logWriteupCreated(
+          data.authorUid,
+          data.authorName,
+          author.role,
+          writeup.id,
+          writeup.title,
+          writeup.category
+        ).catch(err => console.warn('Failed to log activity:', err));
+      }
+    } catch (err) {
+      console.warn('Failed to log writeup activity:', err);
+    }
 
     return writeup;
   } catch (error) {
@@ -280,14 +298,18 @@ export async function getWriteups(
       q = query(q, where('ctfName', '==', filters.ctfName));
     }
 
-    // Apply sorting
+    // Apply sorting - try with orderBy, fallback to no orderBy if it fails
     const sortBy = filters.sortBy ?? 'hot';
-    if (sortBy === 'hot') {
-      q = query(q, orderBy('hotScore', 'desc'));
-    } else if (sortBy === 'date') {
-      q = query(q, orderBy('date', 'desc'));
-    } else if (sortBy === 'upvotes') {
-      q = query(q, orderBy('upvotes', 'desc'));
+    try {
+      if (sortBy === 'hot') {
+        q = query(q, orderBy('hotScore', 'desc'));
+      } else if (sortBy === 'date') {
+        q = query(q, orderBy('date', 'desc'));
+      } else if (sortBy === 'upvotes') {
+        q = query(q, orderBy('upvotes', 'desc'));
+      }
+    } catch (sortError) {
+      console.warn('Failed to apply sorting, continuing without orderBy:', sortError);
     }
 
     // Apply limit
@@ -295,10 +317,25 @@ export async function getWriteups(
       q = query(q, limit(filters.limit));
     }
 
+    console.log('Executing Firestore query for writeups...');
     const querySnapshot = await withTimeout(getDocs(q));
-    return querySnapshot.docs.map((doc) => doc.data() as Writeup);
+    console.log(`Found ${querySnapshot.docs.length} writeups`);
+
+    const writeups = querySnapshot.docs.map((doc) => {
+      const data = doc.data() as Writeup;
+      // Ensure id field is set from document ID if missing
+      const writeup = {
+        ...data,
+        id: data.id || doc.id
+      };
+      console.log('Writeup:', writeup.id, writeup.title);
+      return writeup;
+    });
+
+    return writeups;
   } catch (error) {
     console.error('Error getting writeups:', error);
+    console.error('Error details:', error);
     return [];
   }
 }

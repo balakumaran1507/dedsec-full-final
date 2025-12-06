@@ -21,8 +21,14 @@ import {
   Cell,
 } from "recharts"
 import { SolveRateData, CategoryData, ActivityData, ChallengeDistribution, SolveLog, TeamStat } from "@/types/dashboard"
+import { useAuth } from "@/lib/auth/useAuth"
+import { getOngoingCTFEvents } from "@/lib/db/ctfEvents"
+import { getAllUsers } from "@/lib/db/user"
+import { CTFEvent } from "@/types/ctf"
+import ActivityFeed from "@/components/dashboard/activity-feed"
 
 export default function CommandCenterPage() {
+  const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [solveRateData, setSolveRateData] = useState<SolveRateData[]>([])
   const [categoryData, setCategoryData] = useState<CategoryData[]>([])
@@ -30,6 +36,14 @@ export default function CommandCenterPage() {
   const [challengeDistribution, setChallengeDistribution] = useState<ChallengeDistribution[]>([])
   const [solveLogs, setSolveLogs] = useState<SolveLog[]>([])
   const [teamStats, setTeamStats] = useState<TeamStat[]>([])
+  const [ongoingEvents, setOngoingEvents] = useState<CTFEvent[]>([])
+  const [totalTeamMembers, setTotalTeamMembers] = useState(0)
+  const [ctftimeStats, setCtftimeStats] = useState<{
+    teamName: string;
+    currentRating: number;
+    globalRank: string | number;
+    country: string;
+  } | null>(null)
 
   // Metrics state
   const [metrics, setMetrics] = useState({
@@ -44,16 +58,80 @@ export default function CommandCenterPage() {
   const [activeSession, setActiveSession] = useState<{ name: string, duration: string } | null>(null)
 
   useEffect(() => {
-    // TODO: Fetch real data from API/Firestore
-    // For now, we simulate a loading delay and then leave data empty or set to initial values
     const loadData = async () => {
       setIsLoading(true)
       try {
-        // Simulate fetch
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Fetch user stats and display them
+        if (user) {
+          setMetrics(prev => ({
+            ...prev,
+            rank: `#${user.rank}`,
+            points: user.contributionScore.toString(),
+            solves: `${user.stats.writeupCount}/---`
+          }))
+        }
 
-        // In a real scenario, we would set state here with fetched data
-        // For now, we keep them empty to signify "no data" or "ready for data"
+        // Fetch ongoing CTF events
+        const events = await getOngoingCTFEvents()
+        setOngoingEvents(events)
+
+        // Set active session if there's an ongoing event
+        if (events.length > 0) {
+          const event = events[0]
+          const endDate = event.endDate && 'toDate' in event.endDate
+            ? event.endDate.toDate()
+            : event.endDate instanceof Date
+              ? event.endDate
+              : new Date()
+
+          const now = new Date()
+          const timeLeft = Math.max(0, endDate.getTime() - now.getTime())
+          const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60))
+
+          setActiveSession({
+            name: event.title,
+            duration: `${hoursLeft}h remaining`
+          })
+
+          setMetrics(prev => ({
+            ...prev,
+            timeLeft: `${hoursLeft}:00`
+          }))
+        }
+
+        // Fetch all team members
+        const allUsers = await getAllUsers()
+        setTotalTeamMembers(allUsers.length)
+        setMetrics(prev => ({
+          ...prev,
+          team: `0/${allUsers.length}`
+        }))
+
+        // Build team stats
+        const stats: TeamStat[] = [
+          { label: "TOTAL MEMBERS", value: allUsers.length.toString(), trend: "+0" },
+          { label: "ACTIVE EVENTS", value: events.length.toString(), trend: "+0" },
+          { label: "TOTAL WRITEUPS", value: allUsers.reduce((sum, u) => sum + u.stats.writeupCount, 0).toString(), trend: "+0" }
+        ]
+        setTeamStats(stats)
+
+        // Fetch CTFTime team stats
+        try {
+          const response = await fetch('/api/team-stats')
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success) {
+              setCtftimeStats({
+                teamName: result.data.teamName,
+                currentRating: Number(result.data.currentRating) || 0,
+                globalRank: result.data.globalRank,
+                country: result.data.country
+              })
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch CTFTime stats:', err)
+        }
 
       } catch (error) {
         console.error("Failed to load dashboard data", error)
@@ -63,7 +141,7 @@ export default function CommandCenterPage() {
     }
 
     loadData()
-  }, [])
+  }, [user])
 
   if (isLoading) {
     return (
@@ -308,29 +386,11 @@ export default function CommandCenterPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <Card className="lg:col-span-5 bg-neutral-950 border-neutral-900">
           <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">SOLVE FEED</CardTitle>
+            <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">ACTIVITY FEED</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {solveLogs.length > 0 ? (
-                solveLogs.map((log, i) => (
-                  <div key={i} className="flex items-start gap-3 text-[10px] py-1.5 border-l border-neutral-800 pl-3">
-                    <span className="text-neutral-700 shrink-0">{log.time}</span>
-                    <span
-                      className={`${log.type === "warning"
-                        ? "text-neutral-400"
-                        : log.type === "info"
-                          ? "text-emerald-600"
-                          : "text-neutral-500"
-                        }`}
-                    >
-                      {log.event}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-[10px] text-neutral-700 tracking-widest">NO RECENT SOLVES</div>
-              )}
+            <div className="max-h-48 overflow-y-auto">
+              <ActivityFeed maxItems={8} showTitle={false} />
             </div>
           </CardContent>
         </Card>
@@ -368,6 +428,35 @@ export default function CommandCenterPage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">TEAM STATS</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 space-y-3">
+            {ctftimeStats && (
+              <div className="mb-4 pb-3 border-b border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-emerald-500 tracking-wider">CTFTIME</span>
+                  <a
+                    href="https://ctftime.org/team/409848"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] text-neutral-600 hover:text-emerald-500 transition-colors"
+                  >
+                    VIEW →
+                  </a>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-600">RATING</span>
+                    <span className="text-xs text-neutral-300">{typeof ctftimeStats.currentRating === 'number' ? ctftimeStats.currentRating.toFixed(2) : ctftimeStats.currentRating}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-600">RANK</span>
+                    <span className="text-xs text-neutral-300">#{ctftimeStats.globalRank}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-600">COUNTRY</span>
+                    <span className="text-xs text-neutral-300">{ctftimeStats.country}</span>
+                  </div>
+                </div>
+              </div>
+            )}
             {teamStats.length > 0 ? (
               teamStats.map((stat) => (
                 <div key={stat.label} className="flex items-center justify-between">

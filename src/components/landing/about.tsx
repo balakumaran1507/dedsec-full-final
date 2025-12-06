@@ -22,7 +22,7 @@ export function About() {
   const smoothX = useSpring(x, { stiffness: 100, damping: 30 })
 
   return (
-    <section id="philosophy" ref={containerRef} className="relative py-12 md:py-16 overflow-hidden">
+    <section id="philosophy" ref={containerRef} className="relative py-3 md:py-4 overflow-hidden">
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -31,10 +31,10 @@ export function About() {
         transition={{ duration: 0.8 }}
         className="px-4 md:px-8 mb-0 py-8 md:py-12"
       >
-        <p className="font-mono text-xs md:text-sm tracking-[0.3em] text-white/50 mb-3">
+        <p className="font-mono text-[10px] md:text-xs tracking-[0.15em] text-white/50 mb-3">
           <span className="text-red-500">03</span> — PHILOSOPHY
         </p>
-        <h2 className="font-sans text-3xl md:text-6xl font-bold">
+        <h2 className="font-sans text-2xl md:text-5xl font-bold">
           The Art of <span className="text-white/70">War</span>
         </h2>
       </motion.div>
@@ -45,7 +45,7 @@ export function About() {
           {statements.map((statement, index) => (
             <motion.p
               key={index}
-              className="text-xl md:text-5xl lg:text-6xl font-sans font-bold tracking-tight text-white/90"
+              className="text-lg md:text-4xl lg:text-5xl font-sans font-bold tracking-tight text-white/90"
               style={{
                 WebkitTextStroke: index % 2 === 0 ? "none" : "1px rgba(255,255,255,0.3)",
                 color: index % 2 === 0 ? "inherit" : "transparent",

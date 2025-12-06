@@ -35,7 +35,7 @@ export function Works() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   return (
-    <section id="operations" className="relative py-12 md:py-16 px-4 md:px-8">
+    <section id="operations" className="relative py-3 md:py-4 px-4 md:px-8">
       {/* Section Header */}
       <SectionHeader number="05" title="OPERATIONS">
         <h2 className="font-sans text-3xl md:text-6xl font-bold">

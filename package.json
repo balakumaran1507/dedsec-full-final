@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "ts-node --project tsconfig.json scripts/seed-test-data.ts",
+    "seed:activity": "ts-node --project tsconfig.json scripts/seed-activity-data.ts"
   },
   "dependencies": {
     "firebase": "^11.1.0",

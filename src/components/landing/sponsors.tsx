@@ -15,7 +15,7 @@ export function Sponsors() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   return (
-    <section id="sponsors" className="relative py-20 md:py-32 px-4 md:px-8 overflow-hidden">
+    <section id="sponsors" className="relative py-5 md:py-8 px-4 md:px-8 overflow-hidden">
       {/* Background Grid Animation */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
@@ -27,7 +27,7 @@ export function Sponsors() {
         transition={{ duration: 0.8 }}
         className="relative z-10 mb-16 md:mb-24 text-center"
       >
-        <p className="font-mono text-xs md:text-sm tracking-[0.3em] text-white/50 mb-4">
+        <p className="font-mono text-[10px] md:text-xs tracking-[0.15em] text-white/50 mb-4">
           <span className="text-red-500">07</span> — ALLIANCE
         </p>
         <h2 className="font-sans text-4xl md:text-7xl font-bold tracking-tighter">

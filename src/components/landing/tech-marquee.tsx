@@ -71,7 +71,7 @@ function MarqueeRow({ items, direction = "left" }: { items: string[]; direction?
 
 export function TechMarquee() {
   return (
-    <section id="arsenal" className="relative py-12 md:py-24 overflow-hidden">
+    <section id="arsenal" className="relative py-3 md:py-6 overflow-hidden">
       {/* Section Header */}
       <div className="px-4 md:px-8">
         <SectionHeader number="09" title="ARSENAL">

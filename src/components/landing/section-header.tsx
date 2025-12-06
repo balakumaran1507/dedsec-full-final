@@ -19,7 +19,7 @@ export function SectionHeader({ number, title, children, className = "" }: Secti
             className={`mb-8 md:mb-12 ${className}`}
         >
             <div className="group inline-block cursor-default">
-                <p className="font-mono text-xs md:text-sm tracking-[0.3em] text-white/50 mb-3 relative overflow-hidden">
+                <p className="font-mono text-[10px] md:text-xs tracking-[0.15em] text-white/50 mb-3 relative overflow-hidden">
                     <span className="relative z-10 transition-all duration-300 group-hover:text-white">
                         <span className="text-red-500 group-hover:text-red-400 transition-colors duration-300">{number}</span> — {title}
                     </span>

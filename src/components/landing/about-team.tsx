@@ -20,7 +20,7 @@ export function AboutTeam() {
   const containerRef = useRef(null)
 
   return (
-    <section id="about" className="relative py-12 md:py-16 px-4 md:px-8" ref={containerRef}>
+    <section id="about" className="relative py-3 md:py-4 px-4 md:px-8" ref={containerRef}>
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -29,7 +29,7 @@ export function AboutTeam() {
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         className="mb-8 md:mb-12"
       >
-        <p className="font-mono text-xs md:text-sm tracking-[0.3em] text-white/50 mb-3">
+        <p className="font-mono text-[10px] md:text-xs tracking-[0.15em] text-white/50 mb-3">
           <span className="text-red-500">04</span> — ABOUT
         </p>
         <h2 className="font-sans text-3xl md:text-6xl font-bold">

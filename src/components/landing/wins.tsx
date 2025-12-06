@@ -63,7 +63,7 @@ export function Wins() {
   const [hoveredAuthoredIndex, setHoveredAuthoredIndex] = useState<number | null>(null)
 
   return (
-    <section id="wins" className="relative py-12 md:py-16 px-4 md:px-8">
+    <section id="wins" className="relative py-3 md:py-4 px-4 md:px-8">
       {/* Section Header */}
       <SectionHeader number="06" title="VICTORIES">
         <h2 className="font-sans text-3xl md:text-6xl font-bold">

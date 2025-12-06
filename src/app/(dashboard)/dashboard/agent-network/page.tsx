@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Search, MoreHorizontal, Clock, Flag, Activity, Signal, Loader2 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { TeamMember, ActivityData } from "@/types/dashboard"
+import { getAllUsers } from "@/lib/db/user"
+import { User } from "@/types/user"
 
 export default function AgentNetworkPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -15,14 +17,35 @@ export default function AgentNetworkPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [activityData, setActivityData] = useState<ActivityData[]>([])
+  const [roleFilter, setRoleFilter] = useState<string>("all")
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        // setMembers([]) // Keep empty for now
-        // setActivityData([])
+        const allUsers = await getAllUsers()
+
+        // Convert User[] to TeamMember[]
+        const teamMembers: TeamMember[] = allUsers.map(user => {
+          // Map user roles to TeamMember roles
+          const roleMap: Record<string, "CAPTAIN" | "CORE" | "MEMBER"> = {
+            'founder': 'CAPTAIN',
+            'admin': 'CORE',
+            'member': 'MEMBER'
+          }
+
+          return {
+            id: user.uid.slice(0, 8).toUpperCase(),
+            name: user.displayName,
+            status: 'offline' as const, // Default status - could be enhanced with real-time presence
+            specialty: user.bio || 'Security Researcher',
+            role: roleMap[user.role] || 'MEMBER',
+            lastSeen: formatLastSeen(user.joinDate),
+            solves: user.stats.writeupCount
+          }
+        })
+
+        setMembers(teamMembers)
       } catch (error) {
         console.error("Failed to load team data", error)
       } finally {
@@ -32,10 +55,31 @@ export default function AgentNetworkPage() {
     loadData()
   }, [])
 
-  const filteredMembers = members.filter(
-    (m) =>
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.id.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const formatLastSeen = (joinDate: any) => {
+    const date = joinDate && 'toDate' in joinDate
+      ? joinDate.toDate()
+      : joinDate instanceof Date
+        ? joinDate
+        : new Date()
+
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 30) return `${diffDays}d ago`
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
+    return `${Math.floor(diffDays / 365)}y ago`
+  }
+
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.specialty.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesRole = roleFilter === "all" || m.role.toLowerCase() === roleFilter.toLowerCase()
+    return matchesSearch && matchesRole
+  })
 
   if (isLoading) {
     return (
@@ -134,8 +178,24 @@ export default function AgentNetworkPage() {
 
         <Card className="lg:col-span-8 bg-neutral-950 border-neutral-900">
           <CardHeader className="pb-2 pt-3 px-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">TEAM ROSTER</CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">TEAM ROSTER</CardTitle>
+                <div className="flex gap-1">
+                  {['all', 'member', 'admin', 'founder'].map(role => (
+                    <button
+                      key={role}
+                      onClick={() => setRoleFilter(role)}
+                      className={`px-2 py-1 text-[9px] tracking-wider rounded transition-colors ${roleFilter === role
+                          ? 'bg-neutral-800 text-neutral-200'
+                          : 'text-neutral-600 hover:text-neutral-400'
+                        }`}
+                    >
+                      {role.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="relative w-48">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-neutral-600" />
                 <Input

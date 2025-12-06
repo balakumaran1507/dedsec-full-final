@@ -4,50 +4,83 @@
 import { useState, useRef, useEffect } from "react"
 import { Hash, Users, Send, AtSign, Smile, Paperclip, Pin, Volume2, Settings, ChevronDown, Loader2 } from "lucide-react"
 import { Button } from "./ui/button"
-import { ChatChannel, ChatMessage, TeamMember } from "@/types/dashboard"
+import { ChatChannel as DashboardChatChannel, ChatMessage as DashboardChatMessage, TeamMember } from "@/types/dashboard"
+import { ChatChannel, ChatMessage } from "@/types/chat"
+import { subscribeToMessages, sendMessage as sendFirestoreMessage } from "@/lib/db/chat"
+import { useAuth } from "@/lib/auth/useAuth"
 
 export default function ChatPage() {
-  const [activeChannel, setActiveChannel] = useState("general")
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [channels, setChannels] = useState<ChatChannel[]>([])
+  const { user } = useAuth()
+  const [activeChannel, setActiveChannel] = useState<ChatChannel>("general")
+  const [messages, setMessages] = useState<DashboardChatMessage[]>([])
+  const channels: { id: ChatChannel; name: string; unread: number }[] = [
+    { id: "general", name: "general", unread: 0 },
+    { id: "ops", name: "operations", unread: 0 },
+    { id: "intel", name: "writeups", unread: 0 }
+  ]
   const [members, setMembers] = useState<TeamMember[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        // TODO: Fetch real data from API/Firebase
-        // setChannels([])
-        // setMessages([])
-        // setMembers([])
-      } catch (error) {
-        console.error("Failed to load chat data", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadData()
-  }, [])
+    setIsLoading(true)
+    // Subscribe to real-time messages
+    const unsubscribe = subscribeToMessages(activeChannel, (firestoreMessages) => {
+      // Convert Firestore messages to dashboard format
+      const dashboardMessages: DashboardChatMessage[] = firestoreMessages.map(msg => {
+        const timestamp = msg.timestamp && 'toDate' in msg.timestamp
+          ? msg.timestamp.toDate()
+          : msg.timestamp instanceof Date
+          ? msg.timestamp
+          : new Date()
+
+        // Map user roles to dashboard roles
+        const roleMap: Record<string, "CAPTAIN" | "CORE" | "MEMBER"> = {
+          'founder': 'CAPTAIN',
+          'admin': 'CORE',
+          'member': 'MEMBER'
+        }
+
+        return {
+          id: parseInt(msg.id.slice(0, 8), 16) || Date.now(),
+          user: msg.username,
+          role: roleMap[msg.userTitle || 'member'] || 'MEMBER',
+          time: timestamp.toTimeString().slice(0, 5),
+          content: msg.content
+        }
+      })
+
+      setMessages(dashboardMessages)
+      setIsLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [activeChannel])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const sendMessage = () => {
-    if (!inputValue.trim()) return
-    const newMessage: ChatMessage = {
-      id: Date.now(), // Temporary ID generation
-      user: "OPERATOR",
-      role: "CAPTAIN",
-      time: new Date().toTimeString().slice(0, 5),
-      content: inputValue,
+  const sendMessage = async () => {
+    if (!inputValue.trim() || !user) return
+
+    setIsSending(true)
+    try {
+      await sendFirestoreMessage({
+        channel: activeChannel,
+        userId: user.uid,
+        username: user.displayName,
+        userTitle: user.role,
+        content: inputValue
+      })
+      setInputValue("")
+    } catch (error) {
+      console.error('Failed to send message:', error)
+    } finally {
+      setIsSending(false)
     }
-    setMessages([...messages, newMessage])
-    setInputValue("")
   }
 
   if (isLoading) {
@@ -195,10 +228,15 @@ export default function ChatPage() {
             </Button>
             <Button
               onClick={sendMessage}
+              disabled={isSending || !inputValue.trim()}
               size="icon"
-              className="h-6 w-6 bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
+              className="h-6 w-6 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50"
             >
-              <Send className="w-3.5 h-3.5" />
+              {isSending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
             </Button>
           </div>
         </div>
