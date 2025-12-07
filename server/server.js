@@ -25,12 +25,26 @@ let db;
 try {
   // Try to load service account from file if it exists
   try {
-    const serviceAccountPath = join(__dirname, '../serviceAccount.json');
-    const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+    // Try multiple possible paths for service account
+    let serviceAccountPath;
+    let serviceAccount;
+
+    // Try current directory first (for Render deployment)
+    try {
+      serviceAccountPath = join(__dirname, 'serviceAccount.json');
+      serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+    } catch {
+      // Try parent directory (for local development)
+      serviceAccountPath = join(__dirname, '../serviceAccount.json');
+      serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+    }
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-  } catch {
+    console.log(`✓ Loaded service account from: ${serviceAccountPath}`);
+  } catch (err) {
+    console.log('⚠ Service account file not found, trying default credentials...');
     // Fallback: Initialize with project ID only (works in some environments)
     admin.initializeApp({
       projectId: 'dedsec-5eae5'
