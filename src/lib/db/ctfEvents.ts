@@ -195,6 +195,10 @@ export async function getCTFEvents(
     const eventsRef = collection(db, CTF_EVENTS_COLLECTION);
     let q = query(eventsRef);
 
+    // If filtering by status, skip orderBy to avoid composite index requirement
+    // We'll sort in memory instead
+    const needsInMemorySort = !!filters.status || !!filters.difficulty || !!filters.format;
+
     // Apply filters
     if (filters.status) {
       q = query(q, where('status', '==', filters.status));
@@ -208,16 +212,30 @@ export async function getCTFEvents(
       q = query(q, where('format', '==', filters.format));
     }
 
-    // Sort by start date (ascending for upcoming, descending for completed)
-    q = query(q, orderBy('startDate', 'asc'));
-
-    // Apply limit
-    if (filters.limit) {
-      q = query(q, limit(filters.limit));
+    // Only sort by startDate in query if no filters (avoids composite index)
+    if (!needsInMemorySort) {
+      q = query(q, orderBy('startDate', 'asc'));
     }
 
+    // Apply limit AFTER we sort in memory
     const querySnapshot = await withTimeout(getDocs(q));
-    return querySnapshot.docs.map((doc) => doc.data() as CTFEvent);
+    let events = querySnapshot.docs.map((doc) => doc.data() as CTFEvent);
+
+    // Sort in memory if we had filters
+    if (needsInMemorySort) {
+      events.sort((a, b) => {
+        const aTime = a.startDate instanceof Date ? a.startDate.getTime() : a.startDate.toMillis();
+        const bTime = b.startDate instanceof Date ? b.startDate.getTime() : b.startDate.toMillis();
+        return aTime - bTime;
+      });
+    }
+
+    // Apply limit after sorting
+    if (filters.limit) {
+      events = events.slice(0, filters.limit);
+    }
+
+    return events;
   } catch (error) {
     console.error('Error getting CTF events:', error);
     return [];

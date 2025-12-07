@@ -23,8 +23,8 @@ export default function IntelligencePage() {
   const [categoryData, setCategoryData] = useState<CategoryData[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
-  const [isGeneratingTest, setIsGeneratingTest] = useState(false)
-  const [isDeletingTest, setIsDeletingTest] = useState(false)
+
+
   const [fullWriteupData, setFullWriteupData] = useState<Record<string, FirestoreWriteup>>({})
   const [newWriteup, setNewWriteup] = useState({
     title: '',
@@ -105,145 +105,9 @@ export default function IntelligencePage() {
     loadData()
   }, [])
 
-  const handleDeleteTestWriteups = async () => {
-    if (!confirm('Are you sure you want to delete all test writeups?')) {
-      return
-    }
 
-    setIsDeletingTest(true)
-    try {
-      const response = await fetch('/api/delete-test-writeups', {
-        method: 'POST',
-      })
 
-      const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete test writeups')
-      }
-
-      alert(`✅ Deleted ${data.deleted} test writeups!`)
-
-      // Reload writeups
-      const allWriteups = await getWriteups({ limit: 100 })
-
-      // Store full writeup data
-      const fullData: Record<string, FirestoreWriteup> = {}
-      allWriteups.forEach(writeup => {
-        const writeupId = writeup.id || `writeup_${Math.random()}`
-        fullData[writeupId.slice(0, 8).toUpperCase()] = writeup
-      })
-      setFullWriteupData(fullData)
-
-      const dashboardWriteups: DashboardWriteup[] = allWriteups.map((writeup, index) => {
-        const date = writeup.date && 'toDate' in writeup.date
-          ? writeup.date.toDate()
-          : writeup.date instanceof Date
-            ? writeup.date
-            : new Date()
-
-        const writeupId = writeup.id || `writeup_${index}`
-
-        return {
-          id: writeupId.slice(0, 8).toUpperCase(),
-          title: writeup.title || 'Untitled',
-          category: writeup.category || 'Misc',
-          author: writeup.authorName || 'Unknown',
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          views: 0,
-          rating: writeup.upvotes || 0
-        }
-      })
-      setDocuments(dashboardWriteups)
-
-      // Rebuild category distribution
-      const categoryCounts: Record<string, number> = {}
-      allWriteups.forEach(w => {
-        categoryCounts[w.category] = (categoryCounts[w.category] || 0) + 1
-      })
-
-      const catData: CategoryData[] = Object.entries(categoryCounts).map(([name, value]) => ({
-        name,
-        value,
-        fill: '#525252'
-      }))
-
-      setCategoryData(catData)
-    } catch (error) {
-      console.error('Failed to delete test writeups:', error)
-      alert('❌ Failed to delete test writeups')
-    } finally {
-      setIsDeletingTest(false)
-    }
-  }
-
-  const handleGenerateTestWriteups = async () => {
-    setIsGeneratingTest(true)
-    try {
-      const response = await fetch('/api/create-test-writeups', {
-        method: 'POST',
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate test writeups')
-      }
-
-      alert(`✅ Generated ${data.created} test writeups!`)
-
-      // Reload writeups
-      const allWriteups = await getWriteups({ limit: 100 })
-
-      // Store full writeup data
-      const fullData: Record<string, FirestoreWriteup> = {}
-      allWriteups.forEach(writeup => {
-        const writeupId = writeup.id || `writeup_${Math.random()}`
-        fullData[writeupId.slice(0, 8).toUpperCase()] = writeup
-      })
-      setFullWriteupData(fullData)
-
-      const dashboardWriteups: DashboardWriteup[] = allWriteups.map((writeup, index) => {
-        const date = writeup.date && 'toDate' in writeup.date
-          ? writeup.date.toDate()
-          : writeup.date instanceof Date
-            ? writeup.date
-            : new Date()
-
-        const writeupId = writeup.id || `writeup_${index}`
-
-        return {
-          id: writeupId.slice(0, 8).toUpperCase(),
-          title: writeup.title || 'Untitled',
-          category: writeup.category || 'Misc',
-          author: writeup.authorName || 'Unknown',
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          views: 0,
-          rating: writeup.upvotes || 0
-        }
-      })
-      setDocuments(dashboardWriteups)
-
-      // Rebuild category distribution
-      const categoryCounts: Record<string, number> = {}
-      allWriteups.forEach(w => {
-        categoryCounts[w.category] = (categoryCounts[w.category] || 0) + 1
-      })
-
-      const catData: CategoryData[] = Object.entries(categoryCounts).map(([name, value]) => ({
-        name,
-        value,
-        fill: '#525252'
-      }))
-
-      setCategoryData(catData)
-    } catch (error) {
-      console.error('Failed to generate test writeups:', error)
-      alert('❌ Failed to generate test writeups')
-    } finally {
-      setIsGeneratingTest(false)
-    }
-  }
 
   const handleCreateWriteup = async () => {
     if (!user || !newWriteup.title || !newWriteup.challengeName || !newWriteup.content) {
@@ -336,34 +200,8 @@ export default function IntelligencePage() {
           <p className="text-[10px] text-neutral-600 tracking-wider">CHALLENGE SOLUTIONS</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button
-            onClick={handleGenerateTestWriteups}
-            disabled={isGeneratingTest}
-            className="bg-indigo-900 hover:bg-indigo-800 text-neutral-300 border border-indigo-800 text-xs tracking-wider"
-          >
-            {isGeneratingTest ? (
-              <>
-                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                GENERATING...
-              </>
-            ) : (
-              '🧪 GENERATE TEST'
-            )}
-          </Button>
-          <Button
-            onClick={handleDeleteTestWriteups}
-            disabled={isDeletingTest}
-            className="bg-red-900 hover:bg-red-800 text-neutral-300 border border-red-800 text-xs tracking-wider"
-          >
-            {isDeletingTest ? (
-              <>
-                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                DELETING...
-              </>
-            ) : (
-              '🗑️ DELETE TEST'
-            )}
-          </Button>
+
+
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800 text-xs tracking-wider"
@@ -461,9 +299,9 @@ export default function IntelligencePage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">BY CATEGORY</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-40 flex items-center justify-center">
+            <div className="h-40 flex items-center justify-center" style={{ minHeight: '160px' }}>
               {categoryData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={categoryData} layout="vertical">
                     <XAxis type="number" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
                     <YAxis
@@ -586,9 +424,9 @@ export default function IntelligencePage() {
                       <div>
                         <p className="text-[10px] text-neutral-600 tracking-wider mb-1">DIFFICULTY</p>
                         <span className={`px-2 py-1 rounded text-[10px] ${writeup.difficulty === 'Easy' ? 'bg-green-900/30 text-green-400' :
-                            iteup.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-400' :
-                              wreup.difficulty === 'Hard' ? 'bg-orange-900/30 text-orange-400' :
-                                'bg-d-900/30 text-red-400'
+                          writeup.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-400' :
+                            writeup.difficulty === 'Hard' ? 'bg-orange-900/30 text-orange-400' :
+                              'bg-red-900/30 text-red-400'
                           }`}>
                           {writeup.difficulty}
                         </span>

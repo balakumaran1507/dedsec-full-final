@@ -11,6 +11,8 @@ import { CtfEvent, ChallengeDistribution } from "@/types/dashboard"
 import { getCTFEvents, getUpcomingCTFEvents, getOngoingCTFEvents, getCompletedCTFEvents, createOrUpdateCTFEvent } from "@/lib/db/ctfEvents"
 import { CTFEvent, CTFEventCreationData, CTFFormat, CTFDifficulty } from "@/types/ctf"
 import { Timestamp } from "firebase/firestore"
+import { AnimatePresence } from "framer-motion"
+import { DedSecToast } from "@/components/ui/dedsec-toast"
 
 interface ParticipationData {
   month: string;
@@ -49,6 +51,7 @@ export default function OperationsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
   const handleSyncCTFTime = async () => {
     setIsSyncing(true)
@@ -66,7 +69,10 @@ export default function OperationsPage() {
       // Update last sync timestamp
       localStorage.setItem('ctftime_last_sync', new Date().getTime().toString())
 
-      alert(`✅ CTFTime sync successful!\nCreated: ${data.created}\nUpdated: ${data.updated}`)
+      setToast({
+        message: `SYNC COMPLETE\nCreated: ${data.created} | Updated: ${data.updated}`,
+        type: "success"
+      })
 
       // Reload events
       const allEvents = await getCTFEvents({ limit: 100 })
@@ -102,7 +108,10 @@ export default function OperationsPage() {
       setStatusData(statusDist)
     } catch (error) {
       console.error('Failed to sync CTFTime:', error)
-      alert('❌ Failed to sync CTFTime events')
+      setToast({
+        message: "CONNECTION FAILED\nUnable to sync with CTFTime",
+        type: "error"
+      })
     } finally {
       setIsSyncing(false)
     }
@@ -319,7 +328,7 @@ export default function OperationsPage() {
                 SYNCING...
               </>
             ) : (
-              '🔄 SYNC CTFTIME'
+              'SYNC CTFTIME'
             )}
           </Button>
           <Button
@@ -380,29 +389,7 @@ export default function OperationsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-neutral-950 border-neutral-900">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-neutral-600 tracking-wider">COMPLETED</p>
-                  <p className="text-xl text-neutral-100">{events.filter(e => e.status === 'complete').length}</p>
-                </div>
-                <CheckCircle className="w-5 h-5 text-neutral-500" />
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-neutral-950 border-neutral-900">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-neutral-600 tracking-wider">AVG RANK</p>
-                  <p className="text-xl text-neutral-100">--</p>
-                </div>
-                <AlertCircle className="w-5 h-5 text-neutral-500" />
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <Card className="lg:col-span-5 bg-neutral-950 border-neutral-900">
@@ -410,9 +397,9 @@ export default function OperationsPage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">PARTICIPATION 2024</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-40 flex items-center justify-center">
+            <div className="h-40 flex items-center justify-center" style={{ minHeight: '160px' }}>
               {participationData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={160}>
                   <AreaChart data={participationData}>
                     <defs>
                       <linearGradient id="ctfGrad" x1="0" y1="0" x2="0" y2="1">
@@ -438,11 +425,11 @@ export default function OperationsPage() {
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">CTF DISTRIBUTION</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4 justify-center h-32">
+            <div className="flex items-center gap-4 justify-center h-32" style={{ minHeight: '128px' }}>
               {statusData.length > 0 ? (
                 <>
-                  <div className="h-32 w-32">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="h-32 w-32" style={{ minHeight: '128px', minWidth: '128px' }}>
+                    <ResponsiveContainer width={128} height={128}>
                       <PieChart>
                         <Pie data={statusData} innerRadius={35} outerRadius={50} paddingAngle={2} dataKey="value">
                           {statusData.map((entry, index) => (
@@ -496,8 +483,8 @@ export default function OperationsPage() {
                         <div className="text-xs text-neutral-200 tracking-wider">{ctf.name}</div>
                         {ctf.ctfData?.difficulty && (
                           <span className={`px-2 py-0.5 rounded text-[9px] ${ctf.ctfData.difficulty === 'Hard' ? 'bg-red-900/30 text-red-400' :
-                              f.ctfData.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-400' :
-                                'bgreen-900/30 text-green-400'
+                            ctf.ctfData.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-400' :
+                              'bg-green-900/30 text-green-400'
                             }`}>
                             {ctf.ctfData.difficulty}
                           </span>
@@ -566,8 +553,8 @@ export default function OperationsPage() {
                   </span>
                   {selectedEvent.ctfData?.difficulty && (
                     <span className={`px-2 py-0.5 rounded ${selectedEvent.ctfData.difficulty === 'Hard' ? 'bg-red-900/30 text-red-400' :
-                        lectedEvent.ctfData.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-400' :
-                          'bgreen-900/30 text-green-400'
+                      selectedEvent.ctfData.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-400' :
+                        'bg-green-900/30 text-green-400'
                       }`}>
                       {selectedEvent.ctfData.difficulty}
                     </span>
@@ -601,8 +588,8 @@ export default function OperationsPage() {
                     STATUS
                   </p>
                   <span className={`inline-block px-2 py-1 rounded text-[10px] ${selectedEvent.status === 'live' ? 'bg-emerald-900/30 text-emerald-400' :
-                      lectedEvent.status === 'upcoming' ? 'bg-neutral-800 text-neutral-300' :
-                        'bneutral-900 text-neutral-500'
+                    selectedEvent.status === 'upcoming' ? 'bg-neutral-800 text-neutral-300' :
+                      'bg-neutral-900 text-neutral-500'
                     }`}>
                     {selectedEvent.status.toUpperCase()}
                   </span>
@@ -848,6 +835,16 @@ export default function OperationsPage() {
           </div>
         </div>
       )}
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <DedSecToast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -34,8 +34,8 @@ import {
 const MESSAGES_COLLECTION_PREFIX = 'chat_messages';
 const PRESENCE_COLLECTION = 'user_presence';
 
-// Max messages per channel (FIFO)
-const MAX_MESSAGES_PER_CHANNEL = 500;
+// Max messages per channel (FIFO) - Rolling window of 100 messages
+const MAX_MESSAGES_PER_CHANNEL = 100;
 
 /**
  * Firestore timeout wrapper (5 seconds)

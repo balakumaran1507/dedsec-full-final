@@ -2,88 +2,68 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Hash, Users, Send, AtSign, Smile, Paperclip, Pin, Volume2, Settings, ChevronDown, Loader2 } from "lucide-react"
+import { Hash, Users, Send, AtSign, Smile, Paperclip, Pin, Volume2, Settings, ChevronDown, Loader2, Wifi, WifiOff } from "lucide-react"
 import { Button } from "./ui/button"
 import { ChatChannel as DashboardChatChannel, ChatMessage as DashboardChatMessage, TeamMember } from "@/types/dashboard"
-import { ChatChannel, ChatMessage } from "@/types/chat"
-import { subscribeToMessages, sendMessage as sendFirestoreMessage } from "@/lib/db/chat"
+import { ChatChannel } from "@/types/chat"
+import { useSocketChat } from "@/lib/hooks/useSocketChat"
 import { useAuth } from "@/lib/auth/useAuth"
 
 export default function ChatPage() {
   const { user } = useAuth()
-  const [activeChannel, setActiveChannel] = useState<ChatChannel>("general")
-  const [messages, setMessages] = useState<DashboardChatMessage[]>([])
+  const [inputValue, setInputValue] = useState("")
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Initialize Socket.io chat
+  const {
+    isConnected,
+    isConnecting,
+    currentChannel,
+    messages: socketMessages,
+    onlineUsers,
+    sendMessage: sendSocketMessage,
+    switchChannel,
+  } = useSocketChat({
+    username: user?.displayName || 'Anonymous',
+    initialChannel: 'general',
+    autoConnect: true
+  })
+
   const channels: { id: ChatChannel; name: string; unread: number }[] = [
     { id: "general", name: "general", unread: 0 },
     { id: "ops", name: "operations", unread: 0 },
-    { id: "intel", name: "writeups", unread: 0 }
+    { id: "intel", name: "writeups", unread: 0 },
+    { id: "ai-lab", name: "ai-lab", unread: 0 }
   ]
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [inputValue, setInputValue] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSending, setIsSending] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    setIsLoading(true)
-    // Subscribe to real-time messages
-    const unsubscribe = subscribeToMessages(activeChannel, (firestoreMessages) => {
-      // Convert Firestore messages to dashboard format
-      const dashboardMessages: DashboardChatMessage[] = firestoreMessages.map(msg => {
-        const timestamp = msg.timestamp && 'toDate' in msg.timestamp
-          ? msg.timestamp.toDate()
-          : msg.timestamp instanceof Date
-          ? msg.timestamp
-          : new Date()
+  // Convert socket messages to dashboard format
+  const messages: DashboardChatMessage[] = socketMessages.map(msg => {
+    const timestamp = new Date(msg.timestamp)
 
-        // Map user roles to dashboard roles
-        const roleMap: Record<string, "CAPTAIN" | "CORE" | "MEMBER"> = {
-          'founder': 'CAPTAIN',
-          'admin': 'CORE',
-          'member': 'MEMBER'
-        }
-
-        return {
-          id: parseInt(msg.id.slice(0, 8), 16) || Date.now(),
-          user: msg.username,
-          role: roleMap[msg.userTitle || 'member'] || 'MEMBER',
-          time: timestamp.toTimeString().slice(0, 5),
-          content: msg.content
-        }
-      })
-
-      setMessages(dashboardMessages)
-      setIsLoading(false)
-    })
-
-    return () => unsubscribe()
-  }, [activeChannel])
+    return {
+      id: msg.id,
+      user: msg.username,
+      role: 'MEMBER' as const,
+      time: timestamp.toTimeString().slice(0, 5),
+      content: msg.content
+    }
+  })
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const sendMessage = async () => {
-    if (!inputValue.trim() || !user) return
-
-    setIsSending(true)
-    try {
-      await sendFirestoreMessage({
-        channel: activeChannel,
-        userId: user.uid,
-        username: user.displayName,
-        userTitle: user.role,
-        content: inputValue
-      })
-      setInputValue("")
-    } catch (error) {
-      console.error('Failed to send message:', error)
-    } finally {
-      setIsSending(false)
-    }
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return
+    sendSocketMessage(inputValue)
+    setInputValue("")
   }
 
-  if (isLoading) {
+  const handleChannelSwitch = (channelId: ChatChannel) => {
+    switchChannel(channelId)
+  }
+
+  if (isConnecting && !isConnected) {
     return (
       <div className="flex items-center justify-center h-full bg-black">
         <div className="flex flex-col items-center gap-4">
@@ -101,7 +81,13 @@ export default function ChatPage() {
         <div className="p-3 border-b border-neutral-900">
           <div className="flex items-center justify-between">
             <span className="text-xs text-neutral-400 tracking-wider">DEDSEC X01</span>
-            <ChevronDown className="w-3 h-3 text-neutral-600" />
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <Wifi className="w-3 h-3 text-emerald-500" title="Connected" />
+              ) : (
+                <WifiOff className="w-3 h-3 text-red-500" title="Disconnected" />
+              )}
+            </div>
           </div>
         </div>
 
@@ -111,8 +97,8 @@ export default function ChatPage() {
             channels.map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => setActiveChannel(channel.id)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${activeChannel === channel.id
+                onClick={() => handleChannelSwitch(channel.id)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${currentChannel === channel.id
                   ? "bg-neutral-900 text-neutral-100"
                   : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50"
                   }`}
@@ -135,14 +121,20 @@ export default function ChatPage() {
         <div className="p-2 border-t border-neutral-900 bg-neutral-950">
           <div className="flex items-center gap-2 p-1.5 rounded hover:bg-neutral-900 transition-colors">
             <div className="relative">
-              <div className="w-7 h-7 bg-neutral-800 rounded-full flex items-center justify-center">
-                <span className="text-[9px] text-neutral-400">OP</span>
+              <div className="w-7 h-7 bg-neutral-800 rounded-full flex items-center justify-center overflow-hidden">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[9px] text-neutral-400">
+                    {user?.displayName?.slice(0, 2).toUpperCase() || 'OP'}
+                  </span>
+                )}
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-neutral-950 rounded-full" />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 ${isConnected ? 'bg-emerald-500' : 'bg-neutral-600'} border-2 border-neutral-950 rounded-full`} />
             </div>
-            <div className="flex-1">
-              <div className="text-[10px] text-neutral-300">OPERATOR</div>
-              <div className="text-[9px] text-neutral-600">Online</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] text-neutral-300 truncate">{user?.displayName || 'OPERATOR'}</div>
+              <div className="text-[9px] text-neutral-600">{isConnected ? 'Online' : 'Offline'}</div>
             </div>
             <Settings className="w-3 h-3 text-neutral-600" />
           </div>
@@ -155,19 +147,20 @@ export default function ChatPage() {
         <div className="h-11 border-b border-neutral-900 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Hash className="w-4 h-4 text-neutral-600" />
-            <span className="text-sm text-neutral-300">{activeChannel}</span>
+            <span className="text-sm text-neutral-300">{currentChannel}</span>
             <span className="text-neutral-800">|</span>
             <span className="text-[10px] text-neutral-600">CTF team discussion channel</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="text-[10px] text-neutral-600 flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              <span>{onlineUsers.length}</span>
+            </div>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-neutral-600 hover:text-neutral-300">
               <Pin className="w-3.5 h-3.5" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-neutral-600 hover:text-neutral-300">
               <Volume2 className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-neutral-600 hover:text-neutral-300">
-              <Users className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
@@ -182,16 +175,9 @@ export default function ChatPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-medium ${msg.role === "CAPTAIN" ? "text-red-500" : "text-neutral-300"}`}
-                    >
+                    <span className="text-xs font-medium text-neutral-300">
                       {msg.user}
                     </span>
-                    {msg.role === "CAPTAIN" && (
-                      <span className="text-[9px] px-1.5 py-0.5 bg-red-950/50 text-red-500 rounded border border-red-900/50">
-                        CAPTAIN
-                      </span>
-                    )}
                     <span className="text-[10px] text-neutral-700">{msg.time}</span>
                   </div>
                   <p className="text-sm text-neutral-400 mt-0.5">{msg.content}</p>
@@ -200,7 +186,7 @@ export default function ChatPage() {
             ))
           ) : (
             <div className="flex items-center justify-center h-full text-[10px] text-neutral-700 tracking-widest">
-              NO MESSAGES
+              {isConnected ? 'NO MESSAGES' : 'DISCONNECTED FROM SERVER'}
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -209,34 +195,31 @@ export default function ChatPage() {
         {/* Input */}
         <div className="p-4 border-t border-neutral-900">
           <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded px-3 py-2">
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-neutral-600 hover:text-neutral-400">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-neutral-600 hover:text-neutral-400" disabled={!isConnected}>
               <Paperclip className="w-4 h-4" />
             </Button>
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder={`Message #${activeChannel}`}
-              className="flex-1 bg-transparent text-sm text-neutral-200 placeholder-neutral-600 outline-none"
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+              placeholder={isConnected ? `Message #${currentChannel}` : 'Connecting...'}
+              disabled={!isConnected}
+              className="flex-1 bg-transparent text-sm text-neutral-200 placeholder-neutral-600 outline-none disabled:opacity-50"
             />
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-neutral-600 hover:text-neutral-400">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-neutral-600 hover:text-neutral-400" disabled={!isConnected}>
               <AtSign className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-neutral-600 hover:text-neutral-400">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-neutral-600 hover:text-neutral-400" disabled={!isConnected}>
               <Smile className="w-4 h-4" />
             </Button>
             <Button
-              onClick={sendMessage}
-              disabled={isSending || !inputValue.trim()}
+              onClick={handleSendMessage}
+              disabled={!isConnected || !inputValue.trim()}
               size="icon"
               className="h-6 w-6 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50"
             >
-              {isSending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Send className="w-3.5 h-3.5" />
-              )}
+              <Send className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
@@ -245,49 +228,41 @@ export default function ChatPage() {
       {/* Members Sidebar */}
       <div className="w-48 bg-neutral-950 border-l border-neutral-900 p-3 hidden lg:block">
         <div className="text-[10px] text-neutral-600 tracking-wider mb-3">
-          ONLINE — {members.filter((m) => m.status === "active").length}
+          ONLINE — {onlineUsers.length}
         </div>
         <div className="space-y-1">
-          {members
-            .filter((m) => m.status === "active")
-            .map((member) => (
+          {onlineUsers.length > 0 ? (
+            onlineUsers.map((username, index) => (
               <div
-                key={member.id}
+                key={`${username}-${index}`}
                 className="flex items-center gap-2 p-1.5 rounded hover:bg-neutral-900 transition-colors"
               >
                 <div className="relative">
                   <div className="w-6 h-6 bg-neutral-800 rounded-full flex items-center justify-center">
-                    <span className="text-[8px] text-neutral-500">{member.name.slice(0, 2).toUpperCase()}</span>
+                    <span className="text-[8px] text-neutral-500">{username.slice(0, 2).toUpperCase()}</span>
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 border border-neutral-950 rounded-full" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div
-                    className={`text-[10px] truncate ${member.role === "CAPTAIN" ? "text-red-500" : "text-neutral-400"}`}
-                  >
-                    {member.name}
+                  <div className="text-[10px] text-neutral-400 truncate">
+                    {username}
                   </div>
-                  <div className="text-[9px] text-neutral-700">{member.specialty}</div>
+                  <div className="text-[9px] text-emerald-500">Online</div>
                 </div>
               </div>
-            ))}
+            ))
+          ) : (
+            <div className="text-[10px] text-neutral-700 py-2">No users online</div>
+          )}
         </div>
 
-        <div className="text-[10px] text-neutral-600 tracking-wider mt-4 mb-3">
-          OFFLINE — {members.filter((m) => m.status === "offline").length}
-        </div>
-        <div className="space-y-1 opacity-50">
-          {members
-            .filter((m) => m.status === "offline" || m.status === "standby")
-            .map((member) => (
-              <div key={member.id} className="flex items-center gap-2 p-1.5">
-                <div className="w-6 h-6 bg-neutral-900 rounded-full flex items-center justify-center">
-                  <span className="text-[8px] text-neutral-600">{member.name.slice(0, 2).toUpperCase()}</span>
-                </div>
-                <span className="text-[10px] text-neutral-600 truncate">{member.name}</span>
-              </div>
-            ))}
-        </div>
+        {!isConnected && (
+          <div className="mt-4 p-2 bg-red-950/20 border border-red-900/30 rounded">
+            <div className="text-[10px] text-red-500 text-center">
+              Disconnected from server
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

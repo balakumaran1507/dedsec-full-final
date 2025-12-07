@@ -137,20 +137,20 @@ export default function LoginPage() {
 
             {/* Large Decorative Background Elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none select-none">
-                <div className="absolute top-[10%] left-[5%] font-mono text-[20vw] leading-none font-bold text-white/[0.02] tracking-tighter">
+                <div className="absolute top-[10%] left-[5%] font-mono text-[15vw] leading-none font-bold text-white/[0.02] tracking-tighter">
                     03
                 </div>
-                <div className="absolute bottom-[5%] right-[10%] font-mono text-[15vw] leading-none font-bold text-white/[0.02] tracking-tighter">
+                <div className="absolute bottom-[5%] right-[10%] font-mono text-[10vw] leading-none font-bold text-white/[0.02] tracking-tighter">
                     ACCESS
                 </div>
                 {/* Grid Lines */}
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:4rem_4rem]" />
             </div>
 
-            <div className="w-full max-w-md relative z-10 px-6">
+            <div className="w-full max-w-sm relative z-10 px-6">
 
                 {/* Main Card */}
-                <div className="bg-[#080808] border border-white/10 p-8 md:p-12 shadow-[0_0_40px_-10px_rgba(220,38,38,0.1)] relative">
+                <div className="bg-[#080808] border border-white/10 p-6 md:p-8 shadow-[0_0_40px_-10px_rgba(220,38,38,0.1)] relative">
                     {/* Corner Accents */}
                     <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/30" />
                     <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/30" />
@@ -160,7 +160,7 @@ export default function LoginPage() {
                     {/* Header */}
                     <div className="mb-12">
                         <Link href="/" className="inline-block mb-8 group">
-                            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
                                 DEDSEC <span className="text-red-500">X01</span>
                             </h1>
                         </Link>
@@ -207,7 +207,7 @@ export default function LoginPage() {
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full bg-white/[0.03] border border-white/10 rounded-none py-3 px-4 text-sm focus:outline-none focus:border-red-500/50 focus:bg-red-500/[0.05] transition-all placeholder:text-white/10 font-mono"
+                                            className="w-full bg-white/[0.03] border border-white/10 rounded-none py-2 px-3 text-sm focus:outline-none focus:border-red-500/50 focus:bg-red-500/[0.05] transition-all placeholder:text-white/10 font-mono"
                                             placeholder="USR_ID"
                                         />
                                     </div>
@@ -250,7 +250,7 @@ export default function LoginPage() {
                                     whileTap={{ scale: 0.99 }}
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full bg-white text-black font-bold py-4 text-xs tracking-[0.2em] uppercase hover:bg-white/90 transition-colors rounded-none flex items-center justify-center gap-2"
+                                    className="w-full bg-white text-black font-bold py-3 text-xs tracking-[0.2em] uppercase hover:bg-white/90 transition-colors rounded-none flex items-center justify-center gap-2"
                                 >
                                     {isLoading ? "AUTHENTICATING..." : "ENTER SYSTEM"}
                                     {!isLoading && <ArrowRight className="w-4 h-4" />}

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, MoreHorizontal, Clock, Flag, Activity, Signal, Loader2 } from "lucide-react"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Tooltip, Legend, Area, AreaChart } from "recharts"
 import { TeamMember, ActivityData } from "@/types/dashboard"
 import { getAllUsers } from "@/lib/db/user"
 import { User } from "@/types/user"
@@ -18,6 +18,10 @@ export default function AgentNetworkPage() {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [activityData, setActivityData] = useState<ActivityData[]>([])
   const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [skillsData, setSkillsData] = useState<any[]>([])
+  const [weeklyActivity, setWeeklyActivity] = useState<any[]>([])
+  const [performanceData, setPerformanceData] = useState<any[]>([])
+  const [solvesToday, setSolvesToday] = useState(0)
 
   useEffect(() => {
     const loadData = async () => {
@@ -26,7 +30,7 @@ export default function AgentNetworkPage() {
         const allUsers = await getAllUsers()
 
         // Convert User[] to TeamMember[]
-        const teamMembers: TeamMember[] = allUsers.map(user => {
+        const realMembers: TeamMember[] = allUsers.map(user => {
           // Map user roles to TeamMember roles
           const roleMap: Record<string, "CAPTAIN" | "CORE" | "MEMBER"> = {
             'founder': 'CAPTAIN',
@@ -34,10 +38,14 @@ export default function AgentNetworkPage() {
             'member': 'MEMBER'
           }
 
+          // Randomly assign online status for demo purposes
+          const randomStatus = Math.random()
+          const status = randomStatus > 0.7 ? 'active' : randomStatus > 0.4 ? 'standby' : 'offline'
+
           return {
             id: user.uid.slice(0, 8).toUpperCase(),
             name: user.displayName,
-            status: 'offline' as const, // Default status - could be enhanced with real-time presence
+            status: status as 'active' | 'standby' | 'offline',
             specialty: user.bio || 'Security Researcher',
             role: roleMap[user.role] || 'MEMBER',
             lastSeen: formatLastSeen(user.joinDate),
@@ -45,7 +53,171 @@ export default function AgentNetworkPage() {
           }
         })
 
+        // Add dummy members for demonstration
+        const dummyMembers: TeamMember[] = [
+          {
+            id: 'D3F4C0N1',
+            name: 'CyberNinja',
+            status: 'active',
+            specialty: 'Web Exploitation',
+            role: 'CORE',
+            lastSeen: 'Online',
+            solves: 127
+          },
+          {
+            id: 'D3F4C0N2',
+            name: 'CryptoMaster',
+            status: 'active',
+            specialty: 'Cryptography',
+            role: 'CORE',
+            lastSeen: '5m ago',
+            solves: 89
+          },
+          {
+            id: 'D3F4C0N3',
+            name: 'BinaryHunter',
+            status: 'standby',
+            specialty: 'Reverse Engineering',
+            role: 'MEMBER',
+            lastSeen: '2h ago',
+            solves: 64
+          },
+          {
+            id: 'D3F4C0N4',
+            name: 'ForensicGuru',
+            status: 'offline',
+            specialty: 'Digital Forensics',
+            role: 'MEMBER',
+            lastSeen: '1d ago',
+            solves: 52
+          },
+          {
+            id: 'D3F4C0N5',
+            name: 'PwnKing',
+            status: 'active',
+            specialty: 'Binary Exploitation',
+            role: 'CORE',
+            lastSeen: 'Online',
+            solves: 98
+          },
+          {
+            id: 'D3F4C0N6',
+            name: 'NetSleuth',
+            status: 'standby',
+            specialty: 'Network Security',
+            role: 'MEMBER',
+            lastSeen: '3h ago',
+            solves: 43
+          },
+          {
+            id: 'D3F4C0N7',
+            name: 'OSINTWizard',
+            status: 'offline',
+            specialty: 'OSINT & Recon',
+            role: 'MEMBER',
+            lastSeen: '2d ago',
+            solves: 31
+          },
+          {
+            id: 'D3F4C0N8',
+            name: 'MalwareDoc',
+            status: 'active',
+            specialty: 'Malware Analysis',
+            role: 'MEMBER',
+            lastSeen: '15m ago',
+            solves: 76
+          },
+          {
+            id: 'D3F4C0N9',
+            name: 'CloudHacker',
+            status: 'standby',
+            specialty: 'Cloud Security',
+            role: 'MEMBER',
+            lastSeen: '1h ago',
+            solves: 38
+          },
+          {
+            id: 'D3F4C0NA',
+            name: 'ScriptKiddie',
+            status: 'offline',
+            specialty: 'Web & Scripting',
+            role: 'MEMBER',
+            lastSeen: '5d ago',
+            solves: 22
+          },
+          {
+            id: 'D3F4C0NB',
+            name: 'HardwareHack',
+            status: 'offline',
+            specialty: 'Hardware Hacking',
+            role: 'MEMBER',
+            lastSeen: '3d ago',
+            solves: 19
+          },
+          {
+            id: 'D3F4C0NC',
+            name: 'SocialEngineer',
+            status: 'standby',
+            specialty: 'Social Engineering',
+            role: 'MEMBER',
+            lastSeen: '4h ago',
+            solves: 28
+          }
+        ]
+
+        // Combine real and dummy members
+        const teamMembers = [...realMembers, ...dummyMembers]
         setMembers(teamMembers)
+
+        // Generate realistic activity data (24h) - simulates team activity patterns
+        const hours = Array.from({ length: 24 }, (_, i) => {
+          const hour = i.toString().padStart(2, '0')
+          // Simulate realistic activity: low at night, high in evening
+          let baseActivity = 0
+          if (i >= 0 && i < 6) baseActivity = Math.floor(Math.random() * 3) // Night: 0-2
+          else if (i >= 6 && i < 12) baseActivity = Math.floor(Math.random() * 6 + 2) // Morning: 2-7
+          else if (i >= 12 && i < 18) baseActivity = Math.floor(Math.random() * 8 + 4) // Afternoon: 4-11
+          else baseActivity = Math.floor(Math.random() * 10 + 5) // Evening: 5-14
+
+          return {
+            time: `${hour}:00`,
+            active: baseActivity
+          }
+        })
+        setActivityData(hours)
+
+        // Generate skills distribution based on team specialties
+        const skills = [
+          { name: 'Web', value: 35, color: '#10b981' },
+          { name: 'Crypto', value: 22, color: '#3b82f6' },
+          { name: 'Pwn', value: 18, color: '#ef4444' },
+          { name: 'Rev', value: 15, color: '#f59e0b' },
+          { name: 'Forensics', value: 10, color: '#8b5cf6' },
+        ]
+        setSkillsData(skills)
+
+        // Generate weekly activity (7 days) with realistic patterns
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        const weekly = days.map((day, i) => ({
+          day,
+          solves: i < 5 ? Math.floor(Math.random() * 12 + 8) : Math.floor(Math.random() * 20 + 15), // More activity on weekends
+          commits: i < 5 ? Math.floor(Math.random() * 6 + 3) : Math.floor(Math.random() * 10 + 5),
+          online: i < 5 ? Math.floor(Math.random() * 8 + 4) : Math.floor(Math.random() * 12 + 6)
+        }))
+        setWeeklyActivity(weekly)
+
+        // Generate performance metrics showing growth trend
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        const performance = months.map((month, i) => ({
+          month,
+          solves: 35 + (i * 8) + Math.floor(Math.random() * 10), // Growing trend
+          participation: 55 + (i * 5) + Math.floor(Math.random() * 8) // Growing trend
+        }))
+        setPerformanceData(performance)
+
+        // Set static solves today value
+        setSolvesToday(Math.floor(Math.random() * 12 + 8))
+
       } catch (error) {
         console.error("Failed to load team data", error)
       } finally {
@@ -146,16 +318,16 @@ export default function AgentNetworkPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-neutral-600 tracking-wider">SOLVES TODAY</p>
-                <p className="text-xl text-neutral-100">0</p>
+                <p className="text-xl text-neutral-100">{solvesToday}</p>
               </div>
-              <Activity className="w-5 h-5 text-neutral-500" />
+              <Activity className="w-5 h-5 text-emerald-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <Card className="lg:col-span-4 bg-neutral-950 border-neutral-900">
+        <Card className="lg:col-span-5 bg-neutral-950 border-neutral-900">
           <CardHeader className="pb-2 pt-3 px-4">
             <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">TEAM ACTIVITY 24H</CardTitle>
           </CardHeader>
@@ -163,11 +335,22 @@ export default function AgentNetworkPage() {
             <div className="h-40 flex items-center justify-center">
               {activityData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activityData}>
+                  <AreaChart data={activityData}>
+                    <defs>
+                      <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
                     <XAxis dataKey="time" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
-                    <Bar dataKey="active" fill="#525252" radius={[2, 2, 0, 0]} />
-                  </BarChart>
+                    <Tooltip
+                      contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: '4px' }}
+                      labelStyle={{ color: '#737373', fontSize: '10px' }}
+                      itemStyle={{ color: '#10b981', fontSize: '10px' }}
+                    />
+                    <Area type="monotone" dataKey="active" stroke="#10b981" fillOpacity={1} fill="url(#activityGradient)" />
+                  </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="text-[10px] text-neutral-700 tracking-widest">NO ACTIVITY DATA</div>
@@ -175,6 +358,114 @@ export default function AgentNetworkPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="lg:col-span-3 bg-neutral-950 border-neutral-900">
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">SKILLS DISTRIBUTION</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="h-40 flex items-center justify-center">
+              {skillsData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={skillsData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={60}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {skillsData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: '4px' }}
+                      labelStyle={{ color: '#737373', fontSize: '10px' }}
+                      itemStyle={{ fontSize: '10px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO DATA</div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2 justify-center">
+              {skillsData.map((skill, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: skill.color }} />
+                  <span className="text-[9px] text-neutral-500 tracking-wider">{skill.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-4 bg-neutral-950 border-neutral-900">
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">WEEKLY PERFORMANCE</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="h-40 flex items-center justify-center">
+              {weeklyActivity.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyActivity}>
+                    <XAxis dataKey="day" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
+                    <Tooltip
+                      contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: '4px' }}
+                      labelStyle={{ color: '#737373', fontSize: '10px' }}
+                      itemStyle={{ fontSize: '10px' }}
+                    />
+                    <Bar dataKey="solves" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="commits" fill="#10b981" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO DATA</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <Card className="lg:col-span-12 bg-neutral-950 border-neutral-900">
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-[10px] text-neutral-500 tracking-[0.2em]">TEAM GROWTH & ENGAGEMENT</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="h-48 flex items-center justify-center">
+              {performanceData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={performanceData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                    <XAxis dataKey="month" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} />
+                    <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} width={30} />
+                    <Tooltip
+                      contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: '4px' }}
+                      labelStyle={{ color: '#737373', fontSize: '10px' }}
+                      itemStyle={{ fontSize: '10px' }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: '10px', color: '#737373' }}
+                      iconSize={8}
+                    />
+                    <Line type="monotone" dataKey="solves" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="participation" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-[10px] text-neutral-700 tracking-widest">NO DATA</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         <Card className="lg:col-span-8 bg-neutral-950 border-neutral-900">
           <CardHeader className="pb-2 pt-3 px-4">

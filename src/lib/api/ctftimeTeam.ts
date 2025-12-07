@@ -1,10 +1,11 @@
 /**
  * CTFTime Team API Integration
  *
- * Fetches team statistics and ranking data from CTFTime.org
+ * Fetches team statistics and ranking data from CTFTime.org via proxy
  */
 
-const CTFTIME_API_BASE = 'https://ctftime.org/api/v1';
+// Use local proxy to avoid CORS issues
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const TEAM_ID = 409848; // DedSec team ID from your link
 
 export interface CTFTimeTeamInfo {
@@ -29,29 +30,31 @@ export interface TeamStats {
 }
 
 /**
- * Fetch team information and statistics
+ * Fetch team information and statistics via proxy
  */
 export async function fetchTeamInfo(): Promise<CTFTimeTeamInfo | null> {
   try {
-    const response = await fetch(`${CTFTIME_API_BASE}/teams/${TEAM_ID}/`, {
-      headers: {
-        'User-Agent': 'DedSec-CTF-Dashboard/1.0',
-      },
+    const response = await fetch(`${API_BASE}/api/ctftime/team/${TEAM_ID}`, {
       cache: 'no-store', // Don't cache team info
     });
 
     if (!response.ok) {
-      throw new Error(`CTFTime API error: ${response.status}`);
+      throw new Error(`Proxy API error: ${response.status}`);
     }
 
     const data = await response.json();
+
+    if (!data.success || !data.team) {
+      throw new Error('Invalid response from proxy');
+    }
+
     return {
-      id: data.id,
-      name: data.name,
-      academic: data.academic || false,
-      country: data.country || 'Unknown',
-      logo: data.logo,
-      rating: data.rating || { '2024': 0, '2023': 0, '2022': 0 },
+      id: data.team.id,
+      name: data.team.name,
+      academic: data.team.academic || false,
+      country: data.team.country || 'Unknown',
+      logo: data.team.logo,
+      rating: data.team.rating || { '2024': 0, '2023': 0, '2022': 0 },
     };
   } catch (error) {
     console.error('Error fetching CTFTime team info:', error);

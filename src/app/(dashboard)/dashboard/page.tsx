@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion"
 import {
   ChevronRight,
   Shield,
-  Users,
   Bell,
   RefreshCw,
   Home,
@@ -24,7 +23,6 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth/useAuth"
 import { DashboardLoader } from "@/components/dashboard/dashboard-loader"
 import CommandCenterPage from "./command-center/page"
-import AgentNetworkPage from "./agent-network/page"
 import OperationsPage from "./operations/page"
 import IntelligencePage from "./intelligence/page"
 import SystemsPage from "./systems/page"
@@ -50,7 +48,6 @@ function CommandPalette({
 
   const commands = [
     { id: "dashboard", label: "Go to Overview", icon: Home, section: "overview" },
-    { id: "team", label: "Go to Team Members", icon: Users, section: "agents" },
     { id: "events", label: "Go to CTF Events", icon: Calendar, section: "operations" },
     { id: "writeups", label: "Go to Writeups", icon: FileText, section: "intelligence" },
     { id: "rankings", label: "Go to Rankings", icon: Trophy, section: "systems" },
@@ -216,7 +213,7 @@ export default function TacticalDashboard() {
             <div className="p-3 h-full flex flex-col">
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-neutral-900">
                 <div className={`${sidebarCollapsed ? "hidden" : "block"}`}>
-                  <h1 className="text-neutral-100 text-sm tracking-[0.3em]">DEDSEC</h1>
+                  <h1 className="text-neutral-100 text-sm tracking-[0.3em]">DEDSEC X01</h1>
                   <p className="text-neutral-600 text-xxs tracking-wider">CTF TEAM // X01</p>
                 </div>
                 {sidebarCollapsed && <span className="text-neutral-500 text-xs mx-auto tracking-wider">DS</span>}
@@ -233,7 +230,6 @@ export default function TacticalDashboard() {
               <nav className="space-y-1 flex-1">
                 {[
                   { id: "overview", icon: Home, label: "OVERVIEW" },
-                  { id: "agents", icon: Users, label: "TEAM" },
                   { id: "operations", icon: Calendar, label: "EVENTS" },
                   { id: "intelligence", icon: FileText, label: "WRITEUPS" },
                   { id: "systems", icon: Trophy, label: "RANKINGS" },
@@ -385,7 +381,6 @@ export default function TacticalDashboard() {
                 className="h-full"
               >
                 {activeSection === "overview" && <CommandCenterPage />}
-                {activeSection === "agents" && <AgentNetworkPage />}
                 {activeSection === "operations" && <OperationsPage />}
                 {activeSection === "intelligence" && <IntelligencePage />}
                 {activeSection === "systems" && <SystemsPage />}

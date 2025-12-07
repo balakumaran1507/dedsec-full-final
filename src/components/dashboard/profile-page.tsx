@@ -1,12 +1,12 @@
 /* eslint-disable */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
-import { Trophy, Flag, Target, Clock, Award, TrendingUp, Edit2, Loader2, User as UserIcon, X, Save } from "lucide-react"
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { Trophy, Flag, Target, Clock, Award, TrendingUp, Edit2, Loader2, User as UserIcon, X, Save, RefreshCw } from "lucide-react"
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts"
 import { SolveHistoryData, CategoryData, DifficultyStat, RecentSolve, Badge as DashboardBadge } from "@/types/dashboard"
 import { useProfile, useUpdateProfile } from "@/lib/hooks/useProfile"
 import { useAuth } from "@/lib/auth/useAuth"
@@ -15,10 +15,11 @@ export default function ProfilePage() {
   const { user: currentUser } = useAuth()
   const { profile, recentWriteups, loading, error } = useProfile()
   const { updateProfile, updating } = useUpdateProfile()
-  const [solveHistory] = useState<SolveHistoryData[]>([])
-  const [categoryStats] = useState<CategoryData[]>([])
-  const [difficultyBreakdown] = useState<DifficultyStat[]>([])
-  const [recentSolves] = useState<RecentSolve[]>([])
+  const [solveHistory, setSolveHistory] = useState<SolveHistoryData[]>([])
+  const [categoryStats, setCategoryStats] = useState<CategoryData[]>([])
+  const [difficultyBreakdown, setDifficultyBreakdown] = useState<DifficultyStat[]>([])
+  const [recentSolves, setRecentSolves] = useState<RecentSolve[]>([])
+  const [statsLoading, setStatsLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     displayName: '',
@@ -30,6 +31,32 @@ export default function ProfilePage() {
       website: ''
     }
   })
+
+  // Fetch profile stats
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true)
+      const res = await fetch(`/api/profile/stats?userId=${currentUser?.uid || 'default'}`)
+      const data = await res.json()
+
+      if (data.success) {
+        setSolveHistory(data.data.solveHistory)
+        setCategoryStats(data.data.categoryStats)
+        setDifficultyBreakdown(data.data.difficultyBreakdown)
+        setRecentSolves(data.data.recentSolves)
+      }
+    } catch (err) {
+      console.error('Failed to fetch stats:', err)
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      fetchStats()
+    }
+  }, [currentUser?.uid])
 
   // Convert user badges to dashboard badges format
   const dashboardBadges: DashboardBadge[] = profile?.badges?.map(badge => ({
@@ -79,8 +106,45 @@ export default function ProfilePage() {
   if (error || !profile) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center">
           <p className="text-xs text-red-500 tracking-widest">{error || 'PROFILE NOT FOUND'}</p>
+          {currentUser && !profile && (
+            <div className="mt-4 p-4 bg-neutral-900 border border-neutral-800 rounded">
+              <p className="text-xs text-neutral-400 mb-4">
+                Your profile hasn't been initialized yet. This usually happens with older accounts.
+              </p>
+              <Button
+                onClick={async () => {
+                  try {
+                    // Initialize profile with basic data
+                    const { createUser } = await import('@/lib/db/user')
+                    await createUser({
+                      uid: currentUser.uid,
+                      email: currentUser.email || 'user@example.com',
+                      displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+                      role: 'member' as const,
+                      stats: {
+                        writeupCount: 0,
+                        totalUpvotes: 0,
+                        ctfParticipation: 0
+                      },
+                      photoURL: currentUser.photoURL || null,
+                      bio: null,
+                      discordId: null,
+                      socialLinks: null
+                    })
+                    window.location.reload()
+                  } catch (err) {
+                    console.error('Failed to initialize profile:', err)
+                    alert('Failed to initialize profile. Please check console for details.')
+                  }
+                }}
+                className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                Initialize Profile
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -90,8 +154,8 @@ export default function ProfilePage() {
   const joinDate = profile.joinDate && 'toDate' in profile.joinDate
     ? profile.joinDate.toDate()
     : profile.joinDate instanceof Date
-    ? profile.joinDate
-    : new Date()
+      ? profile.joinDate
+      : new Date()
 
   const formattedJoinDate = joinDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
 
@@ -107,17 +171,17 @@ export default function ProfilePage() {
               <UserIcon className="w-8 h-8 text-neutral-500" />
             )}
           </div>
-          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-neutral-950 rounded-full" />
+          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-neutral-500 border-2 border-neutral-950 rounded-full" />
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl text-neutral-100 tracking-wider">{profile.displayName.toUpperCase()}</h2>
-            {'role' in profile && (
+            <h2 className="text-xl text-neutral-100 tracking-wider">{(profile.displayName || 'User').toUpperCase()}</h2>
+            {'role' in profile && profile.role && (
               <span className="text-[10px] px-2 py-0.5 bg-red-950/50 text-red-500 rounded border border-red-900/50">
                 {profile.role.toUpperCase()}
               </span>
             )}
-            <span className="text-xs text-indigo-400 font-mono tracking-wider">{profile.title}</span>
+            <span className="text-xs text-neutral-500 font-mono tracking-wider">{profile.title || 'ROOKIE'}</span>
           </div>
           {profile.bio && (
             <p className="text-xs text-neutral-400 mt-1">{profile.bio}</p>
@@ -125,20 +189,32 @@ export default function ProfilePage() {
           <div className="flex items-center gap-4 mt-3 text-[10px] text-neutral-500">
             <span>JOINED: {formattedJoinDate}</span>
             <span>|</span>
-            <span>CTFS: {profile.stats.ctfParticipation}</span>
+            <span>CTFS: {profile.stats?.ctfParticipation || 0}</span>
             <span>|</span>
-            <span>RANK: #{profile.rank} GLOBAL</span>
+            <span>RANK: #{profile.rank || 0} GLOBAL</span>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleEditClick}
-          className="text-xs border-neutral-800 text-neutral-400 hover:bg-neutral-900 bg-transparent"
-        >
-          <Edit2 className="w-3 h-3 mr-2" />
-          EDIT
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchStats}
+            disabled={statsLoading}
+            className="text-xs border-neutral-800 text-neutral-400 hover:bg-neutral-900 bg-transparent"
+          >
+            <RefreshCw className={`w-3 h-3 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            REFRESH
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEditClick}
+            className="text-xs border-neutral-800 text-neutral-400 hover:bg-neutral-900 bg-transparent"
+          >
+            <Edit2 className="w-3 h-3 mr-2" />
+            EDIT
+          </Button>
+        </div>
       </div>
 
       {/* Edit Profile Modal */}
@@ -254,11 +330,11 @@ export default function ProfilePage() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
-          { label: "WRITEUPS", value: profile.stats.writeupCount.toString(), icon: Flag },
-          { label: "CONTRIBUTION SCORE", value: profile.contributionScore.toString(), icon: Trophy },
-          { label: "TOTAL UPVOTES", value: profile.stats.totalUpvotes.toString(), icon: TrendingUp },
-          { label: "CTF EVENTS", value: profile.stats.ctfParticipation.toString(), icon: Target },
-          { label: "GLOBAL RANK", value: `#${profile.rank}`, icon: Award },
+          { label: "WRITEUPS", value: (profile.stats?.writeupCount || 0).toString(), icon: Flag },
+          { label: "CONTRIBUTION SCORE", value: (profile.contributionScore || 0).toString(), icon: Trophy },
+          { label: "TOTAL UPVOTES", value: (profile.stats?.totalUpvotes || 0).toString(), icon: TrendingUp },
+          { label: "CTF EVENTS", value: (profile.stats?.ctfParticipation || 0).toString(), icon: Target },
+          { label: "GLOBAL RANK", value: `#${profile.rank || 0}`, icon: Award },
         ].map((stat) => (
           <Card key={stat.label} className="bg-neutral-950 border-neutral-900">
             <CardContent className="p-3">
@@ -285,12 +361,22 @@ export default function ProfilePage() {
                   <LineChart data={solveHistory}>
                     <XAxis dataKey="month" tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={25} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#171717',
+                        border: '1px solid #262626',
+                        borderRadius: '4px',
+                        fontSize: '10px'
+                      }}
+                      labelStyle={{ color: '#a3a3a3' }}
+                    />
                     <Line
                       type="monotone"
                       dataKey="solves"
-                      stroke="#737373"
-                      strokeWidth={1.5}
-                      dot={{ fill: "#525252", r: 2 }}
+                      stroke="#525252"
+                      strokeWidth={2}
+                      dot={{ fill: "#525252", r: 3 }}
+                      activeDot={{ r: 5, fill: "#a3a3a3" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -315,7 +401,7 @@ export default function ProfilePage() {
                       <PieChart>
                         <Pie data={categoryStats} innerRadius={30} outerRadius={50} paddingAngle={2} dataKey="value">
                           {categoryStats.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                            <Cell key={`cell-${index}`} fill={['#262626', '#404040', '#525252', '#737373', '#a3a3a3', '#d4d4d4'][index % 6]} />
                           ))}
                         </Pie>
                       </PieChart>
@@ -349,7 +435,28 @@ export default function ProfilePage() {
                   <BarChart data={difficultyBreakdown}>
                     <XAxis dataKey="name" tick={{ fill: "#525252", fontSize: 8 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "#525252", fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
-                    <Bar dataKey="count" fill="#525252" radius={[2, 2, 0, 0]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#171717',
+                        border: '1px solid #262626',
+                        borderRadius: '4px',
+                        fontSize: '10px'
+                      }}
+                      labelStyle={{ color: '#a3a3a3' }}
+                      cursor={{ fill: 'rgba(163, 163, 163, 0.1)' }}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      {difficultyBreakdown.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            entry.name === 'Easy' ? '#404040' :
+                              entry.name === 'Med' ? '#737373' :
+                                '#a3a3a3'
+                          }
+                        />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -370,17 +477,17 @@ export default function ProfilePage() {
                 recentSolves.map((solve, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between py-2 border-b border-neutral-900 last:border-0"
+                    className="flex items-center justify-between py-2 px-2 -mx-2 border-b border-neutral-900 last:border-0 hover:bg-neutral-900/50 transition-colors cursor-pointer rounded"
                   >
                     <div className="flex items-center gap-3">
-                      <Flag className="w-3.5 h-3.5 text-neutral-700" />
+                      <Flag className="w-3.5 h-3.5 text-neutral-500" />
                       <div>
-                        <div className="text-xs text-neutral-300">{solve.name}</div>
+                        <div className="text-xs text-neutral-300 hover:text-neutral-100 transition-colors">{solve.name}</div>
                         <div className="text-[10px] text-neutral-600">{solve.category}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-neutral-400">{solve.points} pts</div>
+                      <div className="text-xs text-neutral-400 font-mono">{solve.points} pts</div>
                       <div className="text-[10px] text-neutral-700">{solve.time}</div>
                     </div>
                   </div>
@@ -405,7 +512,7 @@ export default function ProfilePage() {
                     key={badge.name}
                     className="p-3 rounded border text-center transition-colors bg-neutral-900 border-neutral-800"
                   >
-                    <Award className="w-5 h-5 mx-auto mb-1.5 text-emerald-500" />
+                    <Award className="w-5 h-5 mx-auto mb-1.5 text-neutral-500" />
                     <div className="text-[9px] tracking-wider text-neutral-300">
                       {badge.name.toUpperCase()}
                     </div>
