@@ -31,15 +31,16 @@ export function DashboardLoader() {
 
     return (
         <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center font-mono">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(220,38,38,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(220,38,38,0.1)_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
             <div className="w-64 space-y-4">
                 <div className="flex justify-between items-end">
                     <span className="text-neutral-500 text-xs tracking-widest">{text}</span>
-                    <span className="text-emerald-500 text-xs font-bold">{progress}%</span>
+                    <span className="text-red-500 text-xs font-bold">{progress}%</span>
                 </div>
 
                 <div className="h-1 bg-neutral-900 w-full overflow-hidden">
                     <motion.div
-                        className="h-full bg-emerald-500"
+                        className="h-full bg-red-500"
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 0.1 }}
@@ -58,7 +59,7 @@ export function DashboardLoader() {
                 </div>
             </div>
 
-            <div className="absolute bottom-8 text-neutral-800 text-[10px] tracking-[0.5em]">
+            <div className="absolute bottom-8 text-red-900 text-[10px] tracking-[0.5em]">
                 DEDSEC // GLOBAL // X01
             </div>
         </div>

@@ -137,14 +137,17 @@ export default function LoginPage() {
 
             {/* Large Decorative Background Elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none select-none">
-                <div className="absolute top-[10%] left-[5%] font-mono text-[15vw] leading-none font-bold text-white/[0.02] tracking-tighter">
-                    03
+                {/* Huge Center Watermark */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-mono text-[40vw] font-bold text-white/[0.02] tracking-tighter z-0 flex items-center justify-center whitespace-nowrap">
+                    X01
                 </div>
-                <div className="absolute bottom-[5%] right-[10%] font-mono text-[10vw] leading-none font-bold text-white/[0.02] tracking-tighter">
-                    ACCESS
-                </div>
+
                 {/* Grid Lines */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+                <motion.div
+                    animate={{ backgroundPosition: ["0rem 0rem", "6rem 6rem"] }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 bg-[linear-gradient(to_right,rgba(220,38,38,0.3)_2px,transparent_2px),linear-gradient(to_bottom,rgba(220,38,38,0.3)_2px,transparent_2px)] bg-[size:6rem_6rem]"
+                />
             </div>
 
             <div className="w-full max-w-sm relative z-10 px-6">
