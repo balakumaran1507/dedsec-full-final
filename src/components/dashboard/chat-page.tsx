@@ -83,9 +83,9 @@ export default function ChatPage() {
             <span className="text-xs text-neutral-400 tracking-wider">DEDSEC X01</span>
             <div className="flex items-center gap-2">
               {isConnected ? (
-                <Wifi className="w-3 h-3 text-emerald-500" title="Connected" />
+                <Wifi className="w-3 h-3 text-emerald-500" aria-label="Connected" />
               ) : (
-                <WifiOff className="w-3 h-3 text-red-500" title="Disconnected" />
+                <WifiOff className="w-3 h-3 text-red-500" aria-label="Disconnected" />
               )}
             </div>
           </div>
