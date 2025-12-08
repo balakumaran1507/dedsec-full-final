@@ -146,7 +146,72 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
 ```env
 PORT=3001
 CLIENT_URL=http://localhost:3000
+
+# Firebase Admin SDK (Required for production deployment)
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour\nPrivate\nKey\nHere\n-----END PRIVATE KEY-----\n"
 ```
+
+## 🚀 Deployment
+
+### Deploying to Render
+
+1. **Prepare your Firebase credentials**
+   - Go to [Firebase Console](https://console.firebase.google.com)
+   - Select your project
+   - Go to **Project Settings** > **Service Accounts**
+   - Click **Generate New Private Key**
+   - Download the JSON file
+
+2. **Create a new Web Service on Render**
+   - Connect your GitHub repository
+   - Set the following:
+     - **Build Command**: `npm install`
+     - **Start Command**: `node server.js`
+     - **Root Directory**: Leave empty (or set to `server` if deploying only backend)
+
+3. **Configure Environment Variables in Render**
+
+   Add the following environment variables in your Render dashboard:
+
+   **Server Configuration:**
+   ```
+   PORT=10000
+   CLIENT_URL=https://your-frontend-url.com
+   ```
+
+   **Firebase Admin SDK** (from the downloaded JSON file):
+   ```
+   FIREBASE_PROJECT_ID=<project_id from JSON>
+   FIREBASE_CLIENT_EMAIL=<client_email from JSON>
+   FIREBASE_PRIVATE_KEY=<private_key from JSON, keep the quotes and \n characters>
+   ```
+
+   **Important:** When copying the `FIREBASE_PRIVATE_KEY`:
+   - Copy the entire value including `"-----BEGIN PRIVATE KEY-----\n...`
+   - Keep the `\n` characters in the string (don't replace them with actual newlines)
+   - Wrap the value in quotes in Render's environment variable field
+
+4. **Deploy**
+   - Click **Create Web Service** or **Deploy**
+   - Render will build and deploy your application
+   - Your server will be available at the Render URL
+
+5. **Update Frontend Configuration**
+
+   Update your frontend's `NEXT_PUBLIC_SOCKET_URL` to point to your Render backend URL:
+   ```env
+   NEXT_PUBLIC_SOCKET_URL=https://your-backend.onrender.com
+   ```
+
+### Deployment Checklist
+
+- [ ] Firebase Admin credentials are set in Render environment variables
+- [ ] `CLIENT_URL` is set to your frontend URL
+- [ ] Frontend `NEXT_PUBLIC_SOCKET_URL` points to backend URL
+- [ ] Firebase Firestore is enabled in Firebase Console
+- [ ] CORS settings allow your frontend domain
 
 ## 📚 Documentation
 

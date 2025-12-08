@@ -23,33 +23,48 @@ const httpServer = createServer(app);
 // Initialize Firebase Admin SDK
 let db;
 try {
-  // Try to load service account from file if it exists
-  try {
-    // Try multiple possible paths for service account
-    let serviceAccountPath;
-    let serviceAccount;
+  let credential;
 
-    // Try current directory first (for Render deployment)
+  // Check if Firebase credentials are provided via environment variables (recommended for production)
+  if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
+    console.log('✓ Using Firebase credentials from environment variables');
+    credential = admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // Handle escaped newlines in private key
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    });
+  } else {
+    // Try to load service account from file if it exists (for local development)
     try {
-      serviceAccountPath = join(__dirname, 'serviceAccount.json');
-      serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
-    } catch {
-      // Try parent directory (for local development)
-      serviceAccountPath = join(__dirname, '../serviceAccount.json');
-      serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
-    }
+      let serviceAccountPath;
+      let serviceAccount;
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log(`✓ Loaded service account from: ${serviceAccountPath}`);
-  } catch (err) {
-    console.log('⚠ Service account file not found, trying default credentials...');
-    // Fallback: Initialize with project ID only (works in some environments)
-    admin.initializeApp({
-      projectId: 'dedsec-5eae5'
-    });
+      // Try current directory first
+      try {
+        serviceAccountPath = join(__dirname, 'serviceAccount.json');
+        serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+      } catch {
+        // Try parent directory
+        serviceAccountPath = join(__dirname, '../serviceAccount.json');
+        serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+      }
+
+      credential = admin.credential.cert(serviceAccount);
+      console.log(`✓ Loaded service account from: ${serviceAccountPath}`);
+    } catch (err) {
+      console.log('⚠ Service account file not found, trying default credentials...');
+      // Fallback: Initialize with project ID only (works in some environments with ADC)
+      credential = null;
+    }
   }
+
+  if (credential) {
+    admin.initializeApp({ credential });
+  } else {
+    admin.initializeApp({ projectId: 'dedsec-5eae5' });
+  }
+
   db = admin.firestore();
   console.log('✓ Firebase Admin initialized');
 } catch (error) {
